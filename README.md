@@ -1,5 +1,5 @@
 # Mandate Recovery Agent
-### Razorpay Buildathon — Track 03: AI Revenue Recovery
+### Razorpay Buildathon — AI Revenue Recovery
 
 An agent that recovers failed UPI Autopay mandates: classifies the failure, predicts optimal retry timing, has an LLM propose the next action, and enforces a deterministic guardrail that can veto it — before anything executes.
 
