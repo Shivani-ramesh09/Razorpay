@@ -1,0 +1,175 @@
+# guardrails/rules.yaml
+# ════════════════════════════════════════════════════════════════════════════════
+# Mandate Recovery Agent — Guardrail Rule Set
+# ════════════════════════════════════════════════════════════════════════════════
+#
+# PURPOSE
+# ───────
+# This file is the single source of truth for all hard constraints the
+# Guardrail Validator module (Day 2) will enforce.  Rules live here as
+# data — not inside Python code — so they can be reviewed by a compliance
+# reader without touching source, and updated without a code deploy.
+#
+# HOW IT IS USED
+# ──────────────
+# guardrails/validator.py (Day 2) loads this file at startup via PyYAML
+# and enforces every rule deterministically, BEFORE any LLM proposal is
+# executed.  The validator must be able to OVERRIDE an LLM proposal and
+# must log both the raw proposal and the final decision.
+#
+# AUTHORITY
+# ─────────
+# Rules annotated [NPCI] derive from NPCI's UPI Autopay circular.
+# Rules annotated [RBI]  derive from RBI's mandate-value guidelines.
+# Rules annotated [INTERNAL] are additional product-safety constraints.
+#
+# FORMAT NOTES
+# ────────────
+# - cooldown_hours values are MINIMUM gaps between retry/action attempts.
+# - attempt_number is 1-indexed (1 = first retry after original failure).
+# - field_reference values are the exact SubscriptionRecord field names
+#   the validator reads at runtime.
+# ════════════════════════════════════════════════════════════════════════════════
+
+version: "1.0"
+effective_date: "2026-08-25"
+
+rules:
+
+  # ── Rule 1: Maximum attempts cap ─────────────────────────────────────────────
+  - id: MAX_ATTEMPTS
+    authority: NPCI
+    description: >
+      The total number of automated retry attempts must never exceed the
+      remaining NPCI-allocated attempt budget.  NPCI allows exactly 4 attempts
+      per billing cycle (1 original charge + 3 retries).  The field
+      `remaining_count` on the subscription tracks how many cycles remain —
+      this is distinct from per-cycle attempt tracking, which is captured in
+      `auth_attempts`.  At the per-cycle level, if `auth_attempts` >= 3,
+      no further automated retries may be scheduled; escalate to human or
+      send a re-auth/nudge instead.
+    field_reference: auth_attempts
+    max_auth_attempts_per_cycle: 3
+    action_on_breach: stand_down
+    overrideable_by_llm: false
+
+  # ── Rule 2: Cooldown windows between retry attempts ───────────────────────────
+  - id: COOLDOWN_WINDOWS
+    authority: NPCI
+    description: >
+      NPCI mandates minimum waiting periods between consecutive UPI Autopay
+      retry attempts within a single billing cycle.  These are hard floors —
+      retrying faster is a protocol violation regardless of failure reason.
+      The cooldown clock starts from the timestamp of the *previous* attempt,
+      not from when the failure event was received.
+    cooldown_schedule:
+      - attempt_number: 1       # First retry (after the original charge failed)
+        min_cooldown_hours: 24
+        label: "24h window (T+24h)"
+      - attempt_number: 2       # Second retry
+        min_cooldown_hours: 72
+        label: "72h window (T+72h from attempt 1)"
+      - attempt_number: 3       # Third and final retry
+        min_cooldown_hours: 168
+        label: "168h window (T+168h from attempt 2, ~7 days)"
+    action_on_breach: defer_until_window_open
+    overrideable_by_llm: false
+
+  # ── Rule 3: Opt-out kill-switch ───────────────────────────────────────────────
+  - id: OPT_OUT_KILL_SWITCH
+    authority: INTERNAL
+    description: >
+      If the customer has opted out of recovery communications (e.g., they
+      replied STOP to a nudge, or the merchant flagged them as do-not-contact),
+      ALL automated recovery actions — retries, re-auth requests, nudges —
+      must immediately cease.  This flag takes absolute priority over any
+      LLM proposal.  The field is a boolean on the subscription metadata;
+      its presence is checked first before any other rule evaluation.
+    field_reference: opt_out
+    opt_out_field_name: opt_out
+    opt_out_field_type: bool
+    action_on_opt_out: stand_down_permanently
+    overrideable_by_llm: false
+    note: >
+      The `opt_out` field is not yet in SubscriptionRecord v1 — it is reserved
+      for Day 5 (multi-channel action expansion).  The validator must check for
+      its existence gracefully (default False if absent).
+
+  # ── Rule 4: Re-authorization threshold ───────────────────────────────────────
+  - id: REAUTH_THRESHOLD
+    authority: RBI
+    description: >
+      RBI guidelines require explicit re-authorisation from the customer before
+      debiting amounts above ₹15,000 on a recurring mandate.  When
+      `above_15k_threshold` is True AND the failure bucket is `reauth_mismatch`
+      OR `expired_mandate`, the agent MUST send a re-authorisation request
+      rather than attempting a blind retry.  A retry against an amount above
+      ₹15,000 without re-auth is a compliance violation.
+    field_reference: above_15k_threshold
+    threshold_amount_paise: 1500000    # ₹15,000 × 100
+    threshold_amount_inr: 15000
+    applicable_buckets:
+      - reauth_mismatch
+      - expired_mandate
+    required_action: send_reauth_request
+    retry_blocked_until_reauth: true
+    overrideable_by_llm: false
+
+  # ── Rule 5: Genuine-decline stand-down ───────────────────────────────────────
+  - id: GENUINE_DECLINE_STANDDOWN
+    authority: INTERNAL
+    description: >
+      When the failure bucket is `genuine_decline` — i.e., the customer
+      explicitly declined the transaction at their bank — automated retries
+      are both futile and potentially harmful to the merchant's relationship
+      with that customer.  The only permitted action is to send a single
+      informational nudge (if opt-out is not set) and then stand down.
+      The LLM agent may propose a nudge; it may not propose a retry.
+    applicable_bucket: genuine_decline
+    permitted_actions:
+      - send_nudge_once
+      - stand_down
+    blocked_actions:
+      - retry
+      - send_reauth_request
+    overrideable_by_llm: false
+
+  # ── Rule 6: Halted subscription guardrail ────────────────────────────────────
+  - id: HALTED_SUBSCRIPTION
+    authority: NPCI
+    description: >
+      When `status` == "halted", NPCI's automated retry window is fully
+      exhausted.  No further retries may be scheduled via the normal autopay
+      flow.  The only permitted recovery actions are: send a human-facing
+      re-authorisation link (for re-auth_mismatch / expired_mandate buckets)
+      or a promise-to-pay nudge (for other buckets), followed by stand-down
+      if no response is received within 7 days.
+    applicable_status: halted
+    permitted_actions:
+      - send_reauth_request
+      - send_nudge_once
+      - escalate_to_human
+      - stand_down
+    blocked_actions:
+      - retry
+    overrideable_by_llm: false
+
+  # ── Rule 7: Minimum remaining cycles check ────────────────────────────────────
+  - id: MIN_REMAINING_CYCLES
+    authority: INTERNAL
+    description: >
+      If `remaining_count` == 0, the subscription plan is complete —
+      there are no more billing cycles to recover.  No recovery action
+      should be taken; mark the subscription as completed and stand down.
+      This prevents wasted compute and spurious nudges on already-finished
+      subscriptions.
+    field_reference: remaining_count
+    stand_down_when: "remaining_count == 0"
+    action_on_breach: stand_down
+    overrideable_by_llm: false
+
+metadata:
+  reviewed_by: "Day 1 — manual review, no automated sign-off yet"
+  next_review: "Day 2 — after guardrail validator is implemented"
+  npci_reference: "NPCI UPI Autopay circular — refer to latest version before production"
+  rbi_reference: "RBI circular on e-mandate processing for recurring transactions"

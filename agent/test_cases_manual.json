@@ -1,0 +1,267 @@
+[
+  {
+    "id": 1,
+    "scenario": "bank_side, normal case",
+    "record": {
+      "subscription_id": "sub_test_01",
+      "status": "active",
+      "failure_bucket": "bank_side",
+      "error_code": "BAD_REQUEST_ERROR",
+      "error_description": "Bank system error",
+      "amount": 1000,
+      "auth_attempts": 1,
+      "remaining_count": 10,
+      "mandate_age_days": 10
+    },
+    "context": {
+      "predicted_optimal_offset_hours": 36,
+      "days_since_last_success": 30
+    }
+  },
+  {
+    "id": 2,
+    "scenario": "bank_side, max attempts",
+    "record": {
+      "subscription_id": "sub_test_02",
+      "status": "active",
+      "failure_bucket": "bank_side",
+      "error_code": "BAD_REQUEST_ERROR",
+      "error_description": "Bank system error",
+      "amount": 1000,
+      "auth_attempts": 3,
+      "remaining_count": 10,
+      "mandate_age_days": 10
+    },
+    "context": {
+      "predicted_optimal_offset_hours": 36,
+      "days_since_last_success": 30
+    }
+  },
+  {
+    "id": 3,
+    "scenario": "low_balance, payday approaching",
+    "record": {
+      "subscription_id": "sub_test_03",
+      "status": "active",
+      "failure_bucket": "low_balance",
+      "error_code": "BAD_REQUEST_ERROR",
+      "error_description": "Insufficient funds",
+      "amount": 5000,
+      "auth_attempts": 1,
+      "remaining_count": 10,
+      "mandate_age_days": 40
+    },
+    "context": {
+      "predicted_optimal_offset_hours": 144,
+      "days_since_last_success": 30
+    }
+  },
+  {
+    "id": 4,
+    "scenario": "expired_mandate",
+    "record": {
+      "subscription_id": "sub_test_04",
+      "status": "active",
+      "failure_bucket": "expired_mandate",
+      "error_code": "BAD_REQUEST_ERROR",
+      "error_description": "Mandate expired",
+      "amount": 999,
+      "auth_attempts": 1,
+      "remaining_count": 10,
+      "mandate_age_days": 365
+    },
+    "context": {}
+  },
+  {
+    "id": 5,
+    "scenario": "reauth_mismatch, above_15k",
+    "record": {
+      "subscription_id": "sub_test_05",
+      "status": "active",
+      "failure_bucket": "reauth_mismatch",
+      "error_code": "BAD_REQUEST_ERROR",
+      "error_description": "Amount limit mismatch",
+      "amount": 1600000,
+      "auth_attempts": 1,
+      "remaining_count": 5,
+      "mandate_age_days": 20
+    },
+    "context": {}
+  },
+  {
+    "id": 6,
+    "scenario": "genuine_decline",
+    "record": {
+      "subscription_id": "sub_test_06",
+      "status": "active",
+      "failure_bucket": "genuine_decline",
+      "error_code": "BAD_REQUEST_ERROR",
+      "error_description": "Card reported lost",
+      "amount": 500,
+      "auth_attempts": 1,
+      "remaining_count": 10,
+      "mandate_age_days": 5
+    },
+    "context": {}
+  },
+  {
+    "id": 7,
+    "scenario": "opt_out",
+    "record": {
+      "subscription_id": "sub_test_07",
+      "status": "active",
+      "failure_bucket": "low_balance",
+      "error_code": "BAD_REQUEST_ERROR",
+      "error_description": "Insufficient funds",
+      "amount": 1000,
+      "auth_attempts": 1,
+      "remaining_count": 5,
+      "mandate_age_days": 10
+    },
+    "context": {
+      "opt_out": true
+    }
+  },
+  {
+    "id": 8,
+    "scenario": "near cooldown boundary",
+    "record": {
+      "subscription_id": "sub_test_08",
+      "status": "active",
+      "failure_bucket": "bank_side",
+      "error_code": "BAD_REQUEST_ERROR",
+      "error_description": "Bank error",
+      "amount": 1000,
+      "auth_attempts": 1,
+      "remaining_count": 5,
+      "mandate_age_days": 10
+    },
+    "context": {
+      "predicted_optimal_offset_hours": 24,
+      "elapsed_hours": 23
+    }
+  },
+  {
+    "id": 9,
+    "scenario": "above 15k, guardrail bait",
+    "record": {
+      "subscription_id": "sub_test_09",
+      "status": "active",
+      "failure_bucket": "reauth_mismatch",
+      "error_code": "BAD_REQUEST_ERROR",
+      "error_description": "Mismatch",
+      "amount": 2000000,
+      "auth_attempts": 2,
+      "remaining_count": 5,
+      "mandate_age_days": 10
+    },
+    "context": {}
+  },
+  {
+    "id": 10,
+    "scenario": "low_balance, high amount",
+    "record": {
+      "subscription_id": "sub_test_10",
+      "status": "active",
+      "failure_bucket": "low_balance",
+      "error_code": "BAD_REQUEST_ERROR",
+      "error_description": "Insufficient funds",
+      "amount": 999900,
+      "auth_attempts": 1,
+      "remaining_count": 5,
+      "mandate_age_days": 10
+    },
+    "context": {
+      "predicted_optimal_offset_hours": 72
+    }
+  },
+  {
+    "id": 11,
+    "scenario": "bank_side, remaining_count=1",
+    "record": {
+      "subscription_id": "sub_test_11",
+      "status": "active",
+      "failure_bucket": "bank_side",
+      "error_code": "BAD_REQUEST_ERROR",
+      "error_description": "Bank error",
+      "amount": 1000,
+      "auth_attempts": 2,
+      "remaining_count": 1,
+      "mandate_age_days": 350
+    },
+    "context": {
+      "predicted_optimal_offset_hours": 36
+    }
+  },
+  {
+    "id": 12,
+    "scenario": "status=halted",
+    "record": {
+      "subscription_id": "sub_test_12",
+      "status": "halted",
+      "failure_bucket": "bank_side",
+      "error_code": "BAD_REQUEST_ERROR",
+      "error_description": "Bank error",
+      "amount": 1000,
+      "auth_attempts": 4,
+      "remaining_count": 5,
+      "mandate_age_days": 10
+    },
+    "context": {}
+  },
+  {
+    "id": 13,
+    "scenario": "first ever cycle",
+    "record": {
+      "subscription_id": "sub_test_13",
+      "status": "active",
+      "failure_bucket": "bank_side",
+      "error_code": "BAD_REQUEST_ERROR",
+      "error_description": "Bank error",
+      "amount": 1000,
+      "auth_attempts": 1,
+      "remaining_count": 12,
+      "mandate_age_days": 30
+    },
+    "context": {
+      "predicted_optimal_offset_hours": 48
+    }
+  },
+  {
+    "id": 14,
+    "scenario": "very old mandate",
+    "record": {
+      "subscription_id": "sub_test_14",
+      "status": "active",
+      "failure_bucket": "bank_side",
+      "error_code": "BAD_REQUEST_ERROR",
+      "error_description": "Bank error",
+      "amount": 1000,
+      "auth_attempts": 1,
+      "remaining_count": 2,
+      "mandate_age_days": 700
+    },
+    "context": {
+      "predicted_optimal_offset_hours": 24
+    }
+  },
+  {
+    "id": 15,
+    "scenario": "low_balance, recent success",
+    "record": {
+      "subscription_id": "sub_test_15",
+      "status": "active",
+      "failure_bucket": "low_balance",
+      "error_code": "BAD_REQUEST_ERROR",
+      "error_description": "Insufficient funds",
+      "amount": 1000,
+      "auth_attempts": 1,
+      "remaining_count": 10,
+      "mandate_age_days": 60
+    },
+    "context": {
+      "predicted_optimal_offset_hours": 72,
+      "days_since_last_success": 2
+    }
+  }
+]

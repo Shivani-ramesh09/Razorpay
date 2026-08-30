@@ -1,0 +1,43 @@
+{
+  "model_backend": "lightgbm",
+  "features": [
+    "bucket_encoded",
+    "offset_hours",
+    "amount",
+    "mandate_age_days",
+    "auth_attempts"
+  ],
+  "bucket_encoding": {
+    "bank_side": 0,
+    "low_balance": 1
+  },
+  "hyperparameters": {
+    "n_estimators": 200,
+    "learning_rate": 0.05,
+    "max_depth": 4
+  },
+  "noise_sigma": {
+    "bank_side": 0.1,
+    "low_balance": 0.13
+  },
+  "evaluation": {
+    "naive_success_rate": 0.5769,
+    "model_success_rate": 0.5769,
+    "lift_pct": 0.0,
+    "n_test_subscriptions": 26
+  },
+  "candidate_offsets": [
+    24,
+    36,
+    48,
+    60,
+    72,
+    84,
+    96,
+    120,
+    144,
+    168
+  ],
+  "lift_warning_threshold_pct": 90.0,
+  "honesty_note": "Lift is derived from a noisy generative function, not real data. The noise prevents circular validation. Actual recovery uplift on real data will be validated in production."
+}

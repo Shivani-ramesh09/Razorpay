@@ -1,0 +1,67 @@
+{
+  "run_timestamp": "2026-08-25T13:08:24.336907+00:00",
+  "batch_file": "synthetic_batch.json",
+  "total_records": 200,
+  "classifier": {
+    "accuracy": 1.0,
+    "accuracy_pct": "100.0%",
+    "per_class": {
+      "bank_side": {
+        "tp": 80,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "low_balance": {
+        "tp": 50,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "expired_mandate": {
+        "tp": 30,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "reauth_mismatch": {
+        "tp": 20,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "genuine_decline": {
+        "tp": 20,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      }
+    }
+  },
+  "guardrail": {
+    "total_overrides": 33,
+    "override_rate": 0.165,
+    "rules_fired": {
+      "MAX_ATTEMPTS": 31,
+      "COOLDOWN_WINDOWS": 2
+    }
+  },
+  "action_distribution": {
+    "delayed_retry": 47,
+    "stand_down": 51,
+    "reauth_request": 50,
+    "promise_to_pay_nudge": 50,
+    "defer_until_window_open": 2
+  },
+  "audit_log_path": "D:\\razorpay\\data\\audit_log.jsonl"
+}

@@ -1,0 +1,5 @@
+# data/.gitkeep
+# This directory holds:
+#   captured_webhooks/   — real webhook JSON payloads (excluded from git via .gitignore)
+#   synthetic_batch.json — generated synthetic records (safe to commit)
+#   test_subscription_ref.json — reference IDs from create_test_subscription.py
