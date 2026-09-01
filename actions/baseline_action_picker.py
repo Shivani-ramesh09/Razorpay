@@ -69,18 +69,29 @@ ACTION_MAP: dict[str, str] = {
 VALID_ACTIONS: frozenset[str] = frozenset(ACTION_MAP.values())
 
 
-def pick_action(bucket: FailureBucket) -> str:
+def pick_action(bucket: FailureBucket, record: Any = None) -> str:
     """
-    Return the default recovery action for the given failure bucket.
+    Return the default recovery action for the given failure bucket and subscription context.
 
     Parameters
     ----------
     bucket : FailureBucket (enum member or raw string value)
+    record : Optional subscription record context (e.g. SubscriptionRecord)
 
     Returns
     -------
     str — one of the action strings in VALID_ACTIONS
     """
+    if record is not None:
+        if getattr(record, "opt_out", False):
+            return "stand_down"
+        if getattr(record, "auth_attempts", 0) >= 3:
+            return "stand_down"
+        if getattr(record, "status", None) == "halted" or getattr(getattr(record, "status", None), "value", None) == "halted":
+            return "stand_down"
+        if getattr(record, "remaining_count", 1) == 0:
+            return "stand_down"
+
     key = bucket.value if hasattr(bucket, "value") else str(bucket)
     action = ACTION_MAP.get(key)
     if action is None:
@@ -89,12 +100,38 @@ def pick_action(bucket: FailureBucket) -> str:
     return action
 
 
-def pick_action_with_rationale(bucket: FailureBucket) -> dict:
+def pick_action_with_rationale(bucket: FailureBucket, record: Any = None) -> dict:
     """
     Extended version that also returns the rationale string.
-    Used by the pipeline for richer audit logging.
+    Used by the pipeline for richer audit logging and compliant terminal fallback.
     """
-    action = pick_action(bucket)
+    if record is not None:
+        if getattr(record, "opt_out", False):
+            return {
+                "action": "stand_down",
+                "rationale": "Customer opted out; standing down immediately per compliance policy.",
+                "source": "baseline_rules",
+            }
+        if getattr(record, "auth_attempts", 0) >= 3:
+            return {
+                "action": "stand_down",
+                "rationale": "Auth attempts exhausted (>=3); standing down compliantly without further retries.",
+                "source": "baseline_rules",
+            }
+        if getattr(record, "status", None) == "halted" or getattr(getattr(record, "status", None), "value", None) == "halted":
+            return {
+                "action": "stand_down",
+                "rationale": "Subscription status is halted; standing down per NPCI rules.",
+                "source": "baseline_rules",
+            }
+        if getattr(record, "remaining_count", 1) == 0:
+            return {
+                "action": "stand_down",
+                "rationale": "No remaining cycles to charge; standing down.",
+                "source": "baseline_rules",
+            }
+
+    action = pick_action(bucket, record=record)
     rationales = {
         "delayed_retry":          "Bank-side transient error; schedule retry after recovery window.",
         "promise_to_pay_nudge":   "Low balance; nudge customer to top up before retry.",

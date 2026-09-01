@@ -43,17 +43,28 @@ MODEL_PATH = ROOT / "data" / "timing_model.pkl"
 _model_cache: Optional[dict] = None
 
 
-def _load_model() -> dict:
+def _load_model() -> Optional[dict]:
     global _model_cache
     if _model_cache is None:
         if not MODEL_PATH.exists():
-            raise FileNotFoundError(
-                f"Timing model not found at {MODEL_PATH}. "
-                f"Run 'python timing/train_timing_model.py' first."
-            )
-        with MODEL_PATH.open("rb") as f:
-            _model_cache = pickle.load(f)
+            return None
+        try:
+            with MODEL_PATH.open("rb") as f:
+                _model_cache = pickle.load(f)
+        except Exception:
+            return None
     return _model_cache
+
+
+def _heuristic_offset(record: SubscriptionRecord) -> int:
+    bucket_val = (
+        record.failure_bucket
+        if isinstance(record.failure_bucket, str)
+        else record.failure_bucket.value
+    )
+    if bucket_val == FailureBucket.LOW_BALANCE.value:
+        return 72 if record.mandate_age_days > 30 else 144
+    return 24 if record.auth_attempts <= 1 else 48
 
 
 def _make_features(record: SubscriptionRecord, offset_hours: int, bucket_encoding: dict) -> list:
@@ -101,6 +112,9 @@ def predict_optimal_offset(record: SubscriptionRecord) -> Optional[int]:
         return None
 
     model_data = _load_model()
+    if model_data is None:
+        return _heuristic_offset(record)
+
     model = model_data["model"]
     bucket_encoding = model_data["bucket_encoding"]
 
@@ -131,8 +145,13 @@ def predict_with_scores(record: SubscriptionRecord) -> Optional[dict]:
         return None
 
     model_data = _load_model()
-    model = model_data["model"]
-    bucket_encoding = model_data["bucket_encoding"]
+    if model_data is None:
+        best_off = _heuristic_offset(record)
+        return {
+            "optimal_offset": best_off,
+            "scores": {off: 0.5 for off in CANDIDATE_OFFSETS},
+            "source": "heuristic_fallback",
+        }
 
     X = np.array(
         [_make_features(record, offset, bucket_encoding) for offset in CANDIDATE_OFFSETS],

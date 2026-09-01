@@ -42,6 +42,8 @@ The agent MUST output valid JSON matching the following schema EXACTLY. The agen
 The agent must respect the following rules, though the guardrail validator acts as a final safety net:
 1. If `opt_out` is true, action MUST be `stand_down`.
 2. If `above_15k_threshold` is true and bucket is `reauth_mismatch`, RBI mandates a strict re-auth.
-3. If `auth_attempts` is maxed out, consider `stand_down` or `escalate_to_human` depending on value.
-4. Use `predicted_optimal_offset_hours` as a signal for timing-related nudges (e.g., if predicting 168h, a nudge via whatsapp might be appropriate near that window).
-5. For `genuine_decline`, the action is `stand_down`.
+3. If `auth_attempts` is maxed out (>=3), both `stand_down` and `escalate_to_human` are valid terminal states for maxed-out failures, and the agent's choice reflects its judgment of recoverability rather than a fixed rule.
+4. For `low_balance` failures, propose `promise_to_pay_nudge` (via SMS or WhatsApp) when this is a repeat low_balance failure (`auth_attempts >= 2`) or when proactively notifying the customer would help them fund the account before the next attempt; propose `delayed_retry` only for a first-time low_balance failure (`auth_attempts == 1`) where waiting alone is sufficient.
+5. Use `predicted_optimal_offset_hours` to decide timing for retries and nudge scheduling.
+6. For `genuine_decline`, the action is `stand_down`.
+7. Reasoning must ONLY reference fields present in the input record — do NOT invent supporting details, customer backstory, or external facts not present in the data.
