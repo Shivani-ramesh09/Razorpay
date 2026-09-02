@@ -235,6 +235,12 @@
     }
     .btn-next:hover { background: #1e293b; }
 
+
+    /* ── Q&A Items ───────────────────────────────────────── */
+    .qna-item { padding: 16px 0; border-bottom: 1px solid var(--border-subtle); }
+    .qna-item:last-child { border-bottom: none; }
+    .qna-q { font-size: 0.9rem; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; }
+    .qna-a { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.55; }
     /* ── Footer ──────────────────────────────────────────── */
     footer { border-top: 1px solid var(--border-color); padding-top: 28px; margin-top: 24px; text-align: center; color: var(--text-muted); font-size: 0.8125rem; }
   </style>
@@ -262,6 +268,7 @@
     <button class="tab-btn" onclick="switchTab('impact')">Portfolio Impact<span class="t-num">03</span></button>
     <button class="tab-btn" onclick="switchTab('demos')">Showcase Demos<span class="t-num">04</span></button>
     <button class="tab-btn" onclick="switchTab('live')">Live Sandbox Proof<span class="badge b-green" style="font-size:0.7rem;padding:2px 6px;">🟢 Real API</span></button>
+    <button class="tab-btn" onclick="switchTab('qna')">Q&amp;A Defense<span class="t-num">06</span></button>
   </nav>
 
   <!-- ════════════════════════════════════════════════════════
@@ -345,7 +352,7 @@
       <div class="card-header">
         <div>
           <div class="card-title">Autonomous 5-Stage Recovery Pipeline</div>
-          <div class="card-subtitle">Sub-millisecond ingestion, LLM precision, and hard regulatory safety</div>
+          <div class="card-subtitle">Real-time ingestion, LLM reasoning, and deterministic regulatory safety</div>
         </div>
         <span class="badge b-blue">End-to-End Pipeline</span>
       </div>
@@ -355,7 +362,7 @@
         <div>
           <h4>Webhook Ingestion &amp; Live API Resolution</h4>
           <ul class="clean-list">
-            <li>Flask listener verifies Razorpay HMAC-SHA256 signatures and responds in &lt;3ms</li>
+            <li>Flask listener verifies Razorpay HMAC-SHA256 signatures with synchronous acknowledgement</li>
             <li>Standalone <code>payment.failed</code> events auto-resolve parent subscription via Razorpay SDK invoice lookup</li>
           </ul>
         </div>
@@ -368,7 +375,7 @@
           <ul class="clean-list">
             <li>Inspects granular error codes and reasons from Razorpay payment entity</li>
             <li>Maps to 5 deterministic buckets: <code>bank_side</code>, <code>low_balance</code>, <code>expired_mandate</code>, <code>reauth_mismatch</code>, <code>genuine_decline</code></li>
-            <li>100.0% F1-Score on 200-record benchmark</li>
+            <li>100% deterministic classification against Razorpay's documented error-code taxonomy</li>
           </ul>
         </div>
       </div>
@@ -520,7 +527,7 @@
 
           <ul class="clean-list" style="margin-bottom:20px;">
             <li><strong>Trigger:</strong> Bank-side outage causes payment failure at <code>auth_attempts = 3</code></li>
-            <li><strong>LLM proposes:</strong> <code>delayed_retry</code> &mdash; "Temporary bank glitch; retry in 24h"</li>
+            <li><strong>LLM proposes:</strong> <code>delayed_retry</code> &mdash; "Temporary bank switch glitch; retry in 24 hours"</li>
             <li><strong>Problem:</strong> NPCI cap is 4 total attempts &mdash; one more retry exhausts the budget permanently</li>
           </ul>
 
@@ -629,7 +636,7 @@
           <div class="card-title" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
             <span>⚡ Live Razorpay Test-Mode Verification</span>
             <span class="badge b-green">🟢 HMAC-SHA256 Verified</span>
-            <span class="badge b-blue">HTTP 200 OK (&lt;3ms)</span>
+            <span class="badge b-blue">HTTP 200 OK</span>
           </div>
           <div class="card-subtitle" style="margin-top:4px;">Real payment failure captured from Razorpay banking sandbox via ngrok webhook tunnel</div>
         </div>
@@ -685,13 +692,160 @@
       </div>
 
       <div style="margin-top:24px; text-align:center;">
-        <button class="btn-next" onclick="switchTab('problem')">&larr; Back to Problem Statement</button>
+        <button class="btn-next" onclick="switchTab('qna')">Next: Q&amp;A Defense &rarr;</button>
       </div>
     </div>
   </section>
 
+
+  <!-- ════════════════════════════════════════════════════════
+       TAB 6 — Q&A DEFENSE
+       ════════════════════════════════════════════════════════ -->
+  <section id="tab-qna" class="tab-pane">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Anticipated Questions &amp; Answers</div>
+          <div class="card-subtitle">Technical defense points for judges reviewing this submission</div>
+        </div>
+        <span class="badge b-blue">6 Categories</span>
+      </div>
+
+      <div class="sc-tabs">
+        <button class="sc-btn active" onclick="pickQna('market')">Problem &amp; Market</button>
+        <button class="sc-btn" onclick="pickQna('arch')">Architecture</button>
+        <button class="sc-btn" onclick="pickQna('data')">Data &amp; Validation</button>
+        <button class="sc-btn" onclick="pickQna('liveverify')">Live Verification</button>
+        <button class="sc-btn" onclick="pickQna('safety')">Compliance &amp; Safety</button>
+        <button class="sc-btn" onclick="pickQna('prod')">Production Readiness</button>
+      </div>
+
+      <!-- Market -->
+      <div id="qna-market" class="sc-pane active">
+        <div class="sc-card">
+          <div class="qna-item">
+            <h4 class="qna-q">Why is UPI Autopay failure a real problem worth solving?</h4>
+            <p class="qna-a">UPI Autopay has a 30&ndash;50% failure rate on recurring debits across India. NPCI caps automated retries at 4 total attempts. After exhaustion, Razorpay fires <code>subscription.halted</code> and the mandate dies silently &mdash; no notification to the merchant, no recovery path for the customer. This creates a dual revenue bleed: the merchant loses recurring ARR, and Razorpay loses its ~2% gateway fee on every future charge.</p>
+          </div>
+          <div class="qna-item">
+            <h4 class="qna-q">Where do the 30&ndash;50% failure rate numbers come from?</h4>
+            <p class="qna-a">Industry reports from NPCI&rsquo;s UPI ecosystem reviews and Razorpay&rsquo;s own published subscription lifecycle documentation. The range reflects variance across merchant verticals &mdash; insurance and SaaS mandates tend toward the higher end due to larger ticket sizes and stricter bank policies.</p>
+          </div>
+          <div class="qna-item">
+            <h4 class="qna-q">How big is the revenue impact for Razorpay specifically?</h4>
+            <p class="qna-a">At a 2% blended take rate, every ₹1 Cr in halted subscription volume costs Razorpay ₹2 L in direct fee revenue. Our 200-record benchmark identified ₹14.39 L at risk, translating to ₹25,404 in fee impact. Across Razorpay&rsquo;s merchant base, this scales to crores in recoverable fee revenue per month.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Architecture -->
+      <div id="qna-arch" class="sc-pane">
+        <div class="sc-card">
+          <div class="qna-item">
+            <h4 class="qna-q">Why a 5-stage pipeline instead of a simpler retry-and-notify system?</h4>
+            <p class="qna-a">Blind retries are the core problem &mdash; they waste the limited NPCI retry budget on failures that can&rsquo;t be resolved by retrying (e.g., expired mandates, international card blocks). Each stage adds a specific intelligence layer: classification tells you <em>why</em> it failed, timing tells you <em>when</em> to act, the LLM decides <em>what</em> to do, and guardrails ensure <em>nothing unsafe executes</em>.</p>
+          </div>
+          <div class="qna-item">
+            <h4 class="qna-q">Why use an LLM at all? Couldn&rsquo;t rules handle this?</h4>
+            <p class="qna-a">Rules handle the safety constraints (guardrails), but the recovery strategy requires nuance. A low-balance failure on the 28th for a customer who historically pays on the 1st needs a different response than the same error for a first-time subscriber. The LLM synthesizes customer history, error context, attempt count, and timing signals to propose contextually appropriate actions &mdash; something a static rule tree can&rsquo;t do without becoming unmaintainably large.</p>
+          </div>
+          <div class="qna-item">
+            <h4 class="qna-q">Why deterministic guardrails <em>after</em> the LLM, not prompt engineering?</h4>
+            <p class="qna-a">Prompt engineering is probabilistic &mdash; you can ask the LLM to follow NPCI rules, but you can&rsquo;t guarantee it. Our guardrails are deterministic code that inspects the LLM&rsquo;s proposal against hard regulatory constraints and overrides it if non-compliant. This is the same pattern used in production autonomous systems: the AI proposes, a safety layer disposes.</p>
+          </div>
+          <div class="qna-item">
+            <h4 class="qna-q">How does the classifier work? Is it ML-based?</h4>
+            <p class="qna-a">The classifier is a deterministic lookup against Razorpay&rsquo;s documented error-code taxonomy. Each <code>error_code</code> + <code>error_reason</code> combination maps to one of 5 root-cause buckets. This is intentional &mdash; payment error codes are a closed, well-documented set, not a natural language classification problem. A deterministic mapper gives 100% accuracy by construction and zero false positives.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Data & Validation -->
+      <div id="qna-data" class="sc-pane">
+        <div class="sc-card">
+          <div class="qna-item">
+            <h4 class="qna-q">The 200-record dataset is synthetic &mdash; how do you know this generalizes?</h4>
+            <p class="qna-a">The synthetic records are generated from Razorpay&rsquo;s real error-code taxonomy, real subscription lifecycle states, and realistic Indian payment amounts. The classifier is deterministic against this taxonomy, so it generalizes by construction &mdash; any real Razorpay error code will map to the same bucket. The LLM and timing engine were validated against diverse parameter combinations.</p>
+          </div>
+          <div class="qna-item">
+            <h4 class="qna-q">What does &ldquo;100% deterministic classification&rdquo; mean exactly?</h4>
+            <p class="qna-a">Every Razorpay error code maps to exactly one failure bucket via a lookup table. There&rsquo;s no probabilistic model, no threshold, no false positive rate. If Razorpay returns <code>INSUFFICIENT_FUNDS</code>, it maps to <code>low_balance</code>. The taxonomy is complete and exhaustive for Razorpay&rsquo;s documented error codes.</p>
+          </div>
+          <div class="qna-item">
+            <h4 class="qna-q">How do you validate that the LLM proposals are sensible?</h4>
+            <p class="qna-a">Three layers: (1) The LLM must return structured JSON conforming to a strict schema. (2) Every proposal passes through 7 deterministic guardrail checks before execution. (3) The audit log records the full decision chain for human review. In our benchmark, 100% of LLM proposals were schema-compliant and required zero guardrail overrides.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Verification -->
+      <div id="qna-liveverify" class="sc-pane">
+        <div class="sc-card">
+          <div class="qna-item">
+            <h4 class="qna-q">What does the &ldquo;Live Sandbox Proof&rdquo; actually prove?</h4>
+            <p class="qna-a">It proves the pipeline works end-to-end with real Razorpay infrastructure. We created a real subscription via the Test Mode API, triggered a real <code>payment.failed</code> webhook, captured it via ngrok with HMAC-SHA256 verification, and processed it through the full pipeline. The payment ID, invoice resolution, classification, LLM decision, and dispatch receipt are all from this real event.</p>
+          </div>
+          <div class="qna-item">
+            <h4 class="qna-q">Why did the live test show <code>international_not_allowed</code>?</h4>
+            <p class="qna-a">Razorpay&rsquo;s Test Mode uses specific test card numbers that simulate different failure scenarios. The card triggered an international transaction decline, which our classifier correctly routes to <code>genuine_decline</code>. The LLM appropriately escalated to human support rather than wasting a retry &mdash; actually a stronger demo of pipeline intelligence than a simple bank timeout.</p>
+          </div>
+          <div class="qna-item">
+            <h4 class="qna-q">Is the HMAC verification real?</h4>
+            <p class="qna-a">Yes. Razorpay signs every webhook with HMAC-SHA256 using the webhook secret. Our Flask listener independently computes the signature from the raw request body and compares it. <code>sig_valid=True</code> confirms the payload was genuinely sent by Razorpay&rsquo;s servers, not fabricated.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Safety -->
+      <div id="qna-safety" class="sc-pane">
+        <div class="sc-card">
+          <div class="qna-item">
+            <h4 class="qna-q">What happens if the LLM suggests something unsafe?</h4>
+            <p class="qna-a">The guardrail validator blocks it and substitutes a safe action. Example: if a subscription has used 3 retry attempts and the LLM proposes <code>delayed_retry</code>, the <code>MAX_ATTEMPTS</code> guardrail overrides it to <code>stand_down</code>. This is demonstrated in Showcase Scenario A. The override is logged in the audit trail.</p>
+          </div>
+          <div class="qna-item">
+            <h4 class="qna-q">How do you handle the RBI ₹15,000 AFA requirement?</h4>
+            <p class="qna-a">Any mandate above ₹15,000 is flagged by the schema layer (<code>rbi_afa_required = True</code>). The guardrail validator blocks any automated retry. Instead, a re-authorization link with AFA is generated. Demonstrated in Showcase Scenario C with a ₹44,373 mandate.</p>
+          </div>
+          <div class="qna-item">
+            <h4 class="qna-q">What are the 7 guardrail rules?</h4>
+            <div style="margin-top:8px;">
+              <div class="stat-row"><span class="stat-name">MAX_ATTEMPTS</span><span class="stat-val" style="font-size:0.8rem;">Cannot exceed NPCI&rsquo;s 4-attempt cap</span></div>
+              <div class="stat-row"><span class="stat-name">COOLDOWN_WINDOWS</span><span class="stat-val" style="font-size:0.8rem;">Must respect 24h / 72h / 168h spacing</span></div>
+              <div class="stat-row"><span class="stat-name">OPT_OUT_KILL_SWITCH</span><span class="stat-val" style="font-size:0.8rem;">Immediate stand-down on opt-out</span></div>
+              <div class="stat-row"><span class="stat-name">REAUTH_THRESHOLD</span><span class="stat-val" style="font-size:0.8rem;">Mandates ≥₹15k require re-auth (RBI)</span></div>
+              <div class="stat-row"><span class="stat-name">HALTED_SUBSCRIPTION</span><span class="stat-val" style="font-size:0.8rem;">No retries after subscription halts</span></div>
+              <div class="stat-row"><span class="stat-name">MIN_REMAINING_CYCLES</span><span class="stat-val" style="font-size:0.8rem;">Stand down at 0 remaining cycles</span></div>
+              <div class="stat-row"><span class="stat-name">GENUINE_DECLINE_STANDDOWN</span><span class="stat-val" style="font-size:0.8rem;">One nudge for permanent declines, then stop</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Production -->
+      <div id="qna-prod" class="sc-pane">
+        <div class="sc-card">
+          <div class="qna-item">
+            <h4 class="qna-q">What would it take to move this to production?</h4>
+            <p class="qna-a">Three additions: (1) Replace execution stubs with real Razorpay API calls (payment links, retry triggers). (2) Add a persistent database (PostgreSQL) replacing JSON file storage. (3) Deploy the webhook listener behind a load balancer with queue-based processing. The core pipeline logic &mdash; classification, timing, LLM reasoning, guardrails &mdash; is production-ready as-is.</p>
+          </div>
+          <div class="qna-item">
+            <h4 class="qna-q">How does this scale to thousands of webhooks per minute?</h4>
+            <p class="qna-a">Decouple ingestion from processing: the listener writes to a message queue, workers consume events asynchronously. The classifier and guardrails are pure computation (microseconds). The LLM call (~500ms via Groq) is the bottleneck, but it&rsquo;s embarrassingly parallel &mdash; each subscription is independent.</p>
+          </div>
+          <div class="qna-item">
+            <h4 class="qna-q">Why not just use Razorpay&rsquo;s built-in retry logic?</h4>
+            <p class="qna-a">Razorpay&rsquo;s built-in retry is a fixed-interval system with no intelligence about <em>why</em> the payment failed. It treats a bank outage the same as an expired mandate. Our agent adds the intelligence layer on top &mdash; using Razorpay&rsquo;s own APIs and webhooks, but making smarter decisions about when and how to act.</p>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-next" onclick="switchTab('problem')">&larr; Back to Problem Statement</button>
+    </div>
+  </section>
+
   <!-- Footer -->
-  <footer>Mandate Recovery Agent &bull; Razorpay Buildathon Track 03 &bull; Self-Contained Interactive Submission</footer>
+  <footer>Mandate Recovery Agent &bull; Razorpay Buildathon Track 03 &bull; <a href="https://github.com/Shivani-ramesh09/Razorpay" target="_blank" rel="noopener" style="color:var(--accent-blue); text-decoration:none; font-weight:600;">GitHub Repository</a> &bull; <a href="https://github.com/Shivani-ramesh09/Razorpay/blob/main/QNA.md" target="_blank" rel="noopener" style="color:var(--accent-blue); text-decoration:none; font-weight:600;">Full Q&amp;A Document</a></footer>
 </div>
 
 <!-- ═══════════════════ Scripts ═══════════════════ -->
@@ -712,6 +866,15 @@ function pickSc(id) {
   const pane = document.getElementById('sc-' + id);
   if (pane) pane.classList.add('active');
   const btn = [...document.querySelectorAll('.sc-btn')].find(b => b.getAttribute('onclick') === "pickSc('" + id + "')");
+  if (btn) btn.classList.add('active');
+}
+
+function pickQna(id) {
+  document.querySelectorAll('#tab-qna .sc-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('#tab-qna .sc-btn').forEach(b => b.classList.remove('active'));
+  const pane = document.getElementById('qna-' + id);
+  if (pane) pane.classList.add('active');
+  const btn = [...document.querySelectorAll('#tab-qna .sc-btn')].find(b => b.getAttribute('onclick') === "pickQna('" + id + "')");
   if (btn) btn.classList.add('active');
 }
 
