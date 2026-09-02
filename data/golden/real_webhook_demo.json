@@ -1,0 +1,52 @@
+{
+  "title": "Real Razorpay Webhook E2E Processing Demo (Signature Verified)",
+  "captured_event_file": "20260902T081904820037_payment_failed.json",
+  "signature_verified": true,
+  "real_razorpay_data": {
+    "payment_id": "pay_TX6FVZGMhsySpm",
+    "subscription_id": "sub_TX5nwsLAxSHiFE",
+    "plan_id": "plan_TX5mTawOHUJGOS",
+    "customer_id": "cust_TX5nwsLAxSHiFE",
+    "amount_inr": 500.0,
+    "amount_paise": 50000,
+    "error_code": "BAD_REQUEST_ERROR",
+    "error_reason": "international_transaction_not_allowed",
+    "error_source": "business",
+    "error_description": "Your payment could not be completed as this business accepts domestic (Indian) card payments only. Try another payment method."
+  },
+  "pipeline_stages": {
+    "stage_1_classification": {
+      "bucket": "genuine_decline",
+      "path": "error_reason_lookup:international_transaction_not_allowed"
+    },
+    "stage_2_timing": {
+      "predicted_optimal_offset_hours": null
+    },
+    "stage_3_llm_agent": {
+      "decision_source": "llm",
+      "proposed_action": "reauth_request",
+      "proposed_channel": "email",
+      "confidence": "medium",
+      "reasoning": "The payment failed due to an unsupported card type, so the customer should be asked to re‑authenticate with a valid domestic payment method. This is the first attempt, so a direct re‑auth request is appropriate."
+    },
+    "stage_4_guardrail": {
+      "approved": true,
+      "rule_triggered": null,
+      "reason": "All guardrail rules passed. Action 'reauth_request' approved.",
+      "final_action": "reauth_request"
+    },
+    "stage_5_execution": {
+      "action": "reauth_request",
+      "channel": "email",
+      "mock_reference_id": "paylink_063a7de14df2",
+      "status": "dispatched",
+      "details": {
+        "reauth_url": "https://rzp.io/i/reauth_eb538a33",
+        "rbi_threshold_mandated": false,
+        "subscription_id": "sub_TX5nwsLAxSHiFE",
+        "amount_inr": 500.0,
+        "compliance_tag": "STANDARD_REAUTH"
+      }
+    }
+  }
+}

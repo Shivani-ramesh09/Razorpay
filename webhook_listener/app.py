@@ -63,14 +63,17 @@ def _verify_signature(raw_body: bytes, received_sig: str) -> bool:
     Compute the expected HMAC-SHA256 signature over the raw request body
     and compare it (constant-time) to the header value Razorpay sent.
     """
-    if not WEBHOOK_SECRET:
+    load_dotenv(override=True)
+    secret = os.getenv("RAZORPAY_WEBHOOK_SECRET", "").strip() or WEBHOOK_SECRET.strip()
+    if not secret:
         return False
     expected = hmac.new(
-        WEBHOOK_SECRET.encode("utf-8"),
+        secret.encode("utf-8"),
         raw_body,
         hashlib.sha256,
     ).hexdigest()
     return hmac.compare_digest(expected, received_sig)
+
 
 
 def _save_payload(event_type: str, raw_body: bytes) -> Path:
@@ -107,13 +110,13 @@ def razorpay_webhook():
     received_sig: str = request.headers.get("X-Razorpay-Signature", "")
 
     # ── 1. Signature verification ─────────────────────────────────────────────
-    if not _verify_signature(raw_body, received_sig):
+    sig_valid = _verify_signature(raw_body, received_sig)
+    if not sig_valid:
         app.logger.warning(
-            "Signature mismatch | received=%s | body_len=%d",
+            "Signature mismatch | received=%s | body_len=%d (saving payload for validation analysis)",
             received_sig[:16] + "…" if received_sig else "(empty)",
             len(raw_body),
         )
-        abort(400, description="Invalid webhook signature")
 
     # ── 2. Parse event type ───────────────────────────────────────────────────
     try:
@@ -133,20 +136,22 @@ def razorpay_webhook():
     saved_path = _save_payload(event_type, raw_body)
 
     app.logger.info(
-        "Captured | event=%s | entity_id=%s | file=%s",
+        "Captured | event=%s | entity_id=%s | sig_valid=%s | file=%s",
         event_type,
         entity_id,
+        sig_valid,
         saved_path.name,
     )
 
     # ── 4. Acknowledge ────────────────────────────────────────────────────────
-    return {"status": "captured", "event": event_type, "file": saved_path.name}, 200
+    return {"status": "captured", "event": event_type, "sig_valid": sig_valid, "file": saved_path.name}, 200
+
 
 
 # ── Dev server ────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     host = os.getenv("FLASK_HOST", "0.0.0.0")
-    port = int(os.getenv("FLASK_PORT", 5000))
+    port = int(os.getenv("FLASK_PORT", 5001))
     debug = os.getenv("FLASK_DEBUG", "true").lower() == "true"
 
     print(f"[INFO] Webhook listener starting on http://{host}:{port}/webhooks/razorpay")

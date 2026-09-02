@@ -89,6 +89,28 @@ ERROR_CODE_MAP: dict[str, FailureBucket] = {
     "FRAUD_SUSPECTED":           FailureBucket.GENUINE_DECLINE,
 }
 
+# ── Secondary lookup: error_reason (granular Razorpay payment field) ───────────
+ERROR_REASON_MAP: dict[str, FailureBucket] = {
+    # Genuine decline / blocked instruments
+    "international_transaction_not_allowed": FailureBucket.GENUINE_DECLINE,
+    "payment_cancelled":                     FailureBucket.GENUINE_DECLINE,
+    "transaction_not_permitted":             FailureBucket.GENUINE_DECLINE,
+    "customer_declined":                     FailureBucket.GENUINE_DECLINE,
+    "do_not_honor":                          FailureBucket.GENUINE_DECLINE,
+    "card_not_supported":                    FailureBucket.GENUINE_DECLINE,
+    # Low balance
+    "insufficient_funds":                    FailureBucket.LOW_BALANCE,
+    "low_balance":                           FailureBucket.LOW_BALANCE,
+    "balance_below_threshold":               FailureBucket.LOW_BALANCE,
+    # Mandate issues
+    "mandate_expired":                       FailureBucket.EXPIRED_MANDATE,
+    "mandate_revoked":                       FailureBucket.EXPIRED_MANDATE,
+    "token_expired":                         FailureBucket.EXPIRED_MANDATE,
+    # Bank side
+    "bank_server_error":                     FailureBucket.BANK_SIDE,
+    "gateway_error":                         FailureBucket.BANK_SIDE,
+}
+
 # ── Secondary lookup: keyword → FailureBucket (for description fallback) ──────
 # Used when error_code is unknown or None. Keywords are checked in order;
 # first match wins. Lowercase match against error_description.lower().
@@ -112,6 +134,7 @@ DESCRIPTION_KEYWORDS: list[tuple[str, FailureBucket]] = [
     ("do not honor",             FailureBucket.GENUINE_DECLINE),
     ("customer blocked",         FailureBucket.GENUINE_DECLINE),
     ("blocked debits",           FailureBucket.GENUINE_DECLINE),
+    ("domestic (indian) card",   FailureBucket.GENUINE_DECLINE),
     ("bank server",              FailureBucket.BANK_SIDE),
     ("technical error",          FailureBucket.BANK_SIDE),
     ("gateway",                  FailureBucket.BANK_SIDE),
@@ -139,6 +162,13 @@ def classify(record: SubscriptionRecord) -> FailureBucket:
     -------
     FailureBucket — exactly one of the five failure categories.
     """
+    # ── Step 0: Granular error_reason lookup (highest precision from real webhooks) ─
+    if getattr(record, "error_reason", None):
+        normalised_reason = record.error_reason.strip().lower()
+        bucket = ERROR_REASON_MAP.get(normalised_reason)
+        if bucket is not None:
+            return bucket
+
     # ── Step 1: Primary — error_code lookup ──────────────────────────────────
     if record.error_code:
         normalised_code = record.error_code.strip().upper()
@@ -174,10 +204,16 @@ def explain(record: SubscriptionRecord) -> dict:
     bucket = classify(record)
     path = "heuristic_fallback"
 
-    if record.error_code:
+    if getattr(record, "error_reason", None):
+        normalised_reason = record.error_reason.strip().lower()
+        if normalised_reason in ERROR_REASON_MAP:
+            path = f"error_reason_lookup:{normalised_reason}"
+
+    if path == "heuristic_fallback" and record.error_code:
         normalised_code = record.error_code.strip().upper()
         if normalised_code in ERROR_CODE_MAP:
             path = f"error_code_lookup:{normalised_code}"
+
 
     if path == "heuristic_fallback" and record.error_description:
         desc_lower = record.error_description.lower()
