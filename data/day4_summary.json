@@ -1,5 +1,5 @@
 {
-  "run_timestamp": "2026-09-01T07:26:51.339317+00:00",
+  "run_timestamp": "2026-09-02T05:49:27.023704+00:00",
   "batch_file": "synthetic_batch.json",
   "total_records": 200,
   "classifier": {
@@ -49,66 +49,64 @@
     }
   },
   "decision_source_breakdown": {
-    "llm": 84,
-    "baseline_fallback": 116,
-    "llm_rate_pct": "42.0%"
+    "llm": 200,
+    "baseline_fallback": 0,
+    "llm_rate_pct": "100.0%"
   },
   "llm_low_balance_isolation": {
-    "total_llm_low_balance": 25,
+    "total_llm_low_balance": 50,
     "repeat_failures_attempts_gte_2": {
-      "total": 18,
-      "promise_to_pay_nudge": 18,
+      "total": 36,
+      "promise_to_pay_nudge": 36,
       "delayed_retry": 0,
       "nudge_rate_pct": "100.0%"
     },
     "first_time_failures_attempts_1": {
-      "total": 7,
-      "delayed_retry": 7,
+      "total": 14,
+      "delayed_retry": 14,
       "promise_to_pay_nudge": 0,
       "delayed_retry_rate_pct": "100.0%"
     }
   },
   "confidence_distribution": {
-    "high": 65,
-    "medium": 19,
-    "N/A": 116
+    "medium": 30,
+    "high": 170
   },
   "guardrail": {
-    "total_overrides": 17,
-    "override_rate": 0.085,
-    "rules_fired": {
-      "MAX_ATTEMPTS": 17
-    }
+    "total_overrides": 0,
+    "override_rate": 0.0,
+    "rules_fired": {}
   },
   "action_distribution": {
-    "delayed_retry": 56,
-    "escalate_to_human": 17,
-    "reauth_request": 46,
-    "promise_to_pay_nudge": 43,
-    "stand_down": 38
+    "delayed_retry": 62,
+    "escalate_to_human": 37,
+    "reauth_request": 43,
+    "promise_to_pay_nudge": 36,
+    "stand_down": 22
   },
   "execution_summary": {
     "total_dispatched": 200,
+    "successful_dispatches": 200,
+    "failed_dispatches_count": 0,
+    "failed_dispatches": [],
     "receipt_coverage_pct": "100.0%",
     "by_channel": {
-      "upi_autopay": 69,
-      "human_agent": 22,
-      "sms": 37,
-      "email": 15,
-      "whatsapp": 25,
-      "internal_system": 32
+      "upi_autopay": 95,
+      "human_agent": 56,
+      "email": 6,
+      "sms": 43
     },
-    "reauth_above_15k_count": 20
+    "reauth_above_15k_count": 19
   },
   "p2p_ledger_summary": {
-    "total_nudges": 43,
+    "total_nudges": 36,
     "outcomes": {
-      "promised_date_given": 23,
-      "clicked_no_commitment": 13,
-      "no_response": 7
+      "clicked_no_commitment": 8,
+      "promised_date_given": 20,
+      "no_response": 8
     },
-    "commitment_rate_pct": "53.5%",
-    "total_value_addressed_inr": 124434.9
+    "commitment_rate_pct": "55.6%",
+    "total_value_addressed_inr": 103131.88
   },
   "audit_log_path": "/Users/shivanir/Documents/razorpay/data/audit_log.jsonl",
   "notes": [
