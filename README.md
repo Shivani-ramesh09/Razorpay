@@ -1,4 +1,4 @@
-# Mandate Recovery Agent ⚡
+# Mandate Recovery Agent
 ### Autonomous, Compliance-First Recovery for UPI Autopay & Recurring Subscriptions
 **Razorpay AI Buildathon — Track 03: AI Revenue Recovery**
 
@@ -9,13 +9,13 @@
 
 ---
 
-## 🚀 Live Interactive Dashboard
-👉 **Explore the live interactive submission:** **[https://dashboard-kappa-nine-79.vercel.app](https://dashboard-kappa-nine-79.vercel.app)**
+##  Live Interactive Dashboard
+**Explore the live interactive submission:** **[https://dashboard-kappa-nine-79.vercel.app](https://dashboard-kappa-nine-79.vercel.app)**
 *Includes full problem breakdown, architecture walkthrough, 200-record portfolio impact metrics, interactive demo scenarios, live Razorpay sandbox proof, and technical Q&A defense.*
 
 ---
 
-## 📌 The Problem: The UPI Autopay Regulatory Cliff
+## The Problem: The UPI Autopay Regulatory Cliff
 
 In India, UPI Autopay accounts for a massive share of recurring subscription volume, but suffers from a **30%–50% failure rate** on recurring debits. 
 
@@ -36,7 +36,7 @@ Under strict **NPCI regulations (NPCI/UPI/2020-21)**:
 
 ---
 
-## 🧠 System Architecture
+## System Architecture
 
 ```
                                   [Razorpay Webhook / Synthetic Stream]
@@ -135,7 +135,7 @@ Tested across a comprehensive, realistic benchmark of 200 recurring mandates:
 
 ---
 
-## ⚡ Real Razorpay Sandbox Webhook Verification
+## Real Razorpay Sandbox Webhook Verification
 
 Beyond synthetic data, the entire pipeline was verified live against **Razorpay's Test Mode API**:
 
@@ -205,7 +205,7 @@ open dashboard/index.html
 
 ---
 
-## ⚖️ Regulatory References
+## Regulatory References
 - **NPCI Circular No. 34 (NPCI/UPI/2020-21)**: Mandate retry frequency caps and cooldown schedules.
 - **RBI Circular RBI/2020-21/74**: Processing of e-Mandates for recurring transactions and ₹15,000 AFA threshold.
 - **Razorpay Subscriptions API Specification**: Webhook signatures, invoice resolution, and `subscription.halted` lifecycle.
