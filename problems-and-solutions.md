@@ -9,7 +9,7 @@
 
 > **"Most recovery agents work across generic payment failures. This one is built around one exact, regulation-bound mechanism: UPI Autopay's 4-attempt NPCI cap and RBI's ₹15,000 re-authorization threshold — encoded as hard, LLM-unoverridable rules, not prompt suggestions."**
 
-While general payment recovery platforms take a broad approach to generic cart drops or simple retry prompts, **Mandate Recovery Agent** takes a deep, specialized approach to India's regulatory framework for recurring payments.
+While general payment recovery platforms take a broad approach to generic cart drops or simple retry prompts, **Sentinel** takes a deep, specialized approach to India's regulatory framework for recurring payments.
 
 ---
 
