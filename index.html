@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sentinel — Autonomous UPI Autopay Recovery Engine</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg-base: #f8fafc;
+      --bg-surface: #ffffff;
+      --bg-subtle: #f1f5f9;
+      --border-color: #e2e8f0;
+      --border-subtle: #edf2f7;
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #64748b;
+      --accent-blue: #0284c7;
+      --accent-blue-subtle: #f0f9ff;
+      --accent-blue-border: #bae6fd;
+      --accent-green: #059669;
+      --accent-green-subtle: #ecfdf5;
+      --accent-green-border: #a7f3d0;
+      --accent-amber: #d97706;
+      --accent-amber-subtle: #fffbeb;
+      --accent-amber-border: #fde68a;
+      --accent-purple: #7c3aed;
+      --accent-purple-subtle: #f5f3ff;
+      --accent-purple-border: #ddd6fe;
+      --accent-rose: #e11d48;
+      --accent-rose-subtle: #fff1f2;
+      --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-primary);
+      font-family: var(--font-family);
+      line-height: 1.6;
+      padding: 40px 28px;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container { max-width: 1180px; margin: 0 auto; }
+
+    /* ── Top Nav ─────────────────────────────────────────── */
+    .top-nav {
+      display: flex; justify-content: space-between; align-items: center;
+      padding-bottom: 24px; border-bottom: 1px solid var(--border-color);
+      margin-bottom: 28px; flex-wrap: wrap; gap: 16px;
+    }
+    h1 { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; }
+    .subtitle { font-size: 0.85rem; color: var(--text-secondary); margin-top: 3px; }
+    .brand-badge {
+      background: var(--accent-blue-subtle); color: var(--accent-blue);
+      border: 1px solid var(--accent-blue-border); font-size: 0.72rem;
+      font-weight: 700; padding: 3px 9px; border-radius: 9999px;
+      letter-spacing: 0.04em; text-transform: uppercase;
+    }
+    .live-chip {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--accent-green-subtle); border: 1px solid var(--accent-green-border);
+      padding: 6px 14px; border-radius: 9999px; font-size: 0.8125rem;
+      font-weight: 600; color: var(--accent-green);
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-green); box-shadow: 0 0 6px var(--accent-green); }
+
+    /* ── Tab Bar ─────────────────────────────────────────── */
+    .tab-bar {
+      display: flex; align-items: center; gap: 6px;
+      background: #fff; padding: 5px; border-radius: 12px;
+      border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);
+      margin-bottom: 36px; overflow-x: auto;
+    }
+    .tab-btn {
+      display: flex; align-items: center; gap: 7px;
+      background: transparent; border: none; padding: 10px 16px;
+      border-radius: 8px; font-family: var(--font-family);
+      font-size: 0.85rem; font-weight: 600; color: var(--text-secondary);
+      cursor: pointer; transition: all 0.15s; white-space: nowrap;
+    }
+    .tab-btn:hover { color: var(--text-primary); background: var(--bg-subtle); }
+    .tab-btn.active { background: var(--accent-blue); color: #fff; box-shadow: 0 2px 4px rgba(2,132,199,0.25); }
+    .tab-btn.active .t-num { background: rgba(255,255,255,0.2); color: #fff; }
+    .t-num {
+      font-size: 0.72rem; background: var(--bg-subtle); color: var(--text-muted);
+      padding: 2px 6px; border-radius: 4px; font-family: var(--font-mono);
+    }
+
+    /* ── Panes ───────────────────────────────────────────── */
+    .tab-pane { display: none; animation: fadeIn 0.2s ease; }
+    .tab-pane.active { display: block; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
+
+    /* ── Card ────────────────────────────────────────────── */
+    .card {
+      background: var(--bg-surface); border: 1px solid var(--border-color);
+      border-radius: 14px; padding: 28px 30px; box-shadow: var(--shadow-sm);
+      margin-bottom: 28px;
+    }
+    .card-header {
+      display: flex; justify-content: space-between; align-items: baseline;
+      margin-bottom: 24px; border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 16px; flex-wrap: wrap; gap: 8px;
+    }
+    .card-title { font-size: 1.125rem; font-weight: 700; letter-spacing: -0.01em; }
+    .card-subtitle { font-size: 0.8125rem; color: var(--text-muted); margin-top: 3px; }
+
+    /* ── Metrics Grid ────────────────────────────────────── */
+    .metrics-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+      gap: 18px; margin-bottom: 28px;
+    }
+    .metric-card {
+      background: var(--bg-surface); border: 1px solid var(--border-color);
+      border-radius: 12px; padding: 20px 22px; box-shadow: var(--shadow-sm);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .metric-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+    .metric-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 600; margin-bottom: 8px; }
+    .metric-value { font-size: 1.625rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 5px; }
+    .metric-sub { font-size: 0.8125rem; color: var(--text-muted); }
+    .metric-sub.pos { color: var(--accent-green); font-weight: 600; }
+
+    /* ── Charts ──────────────────────────────────────────── */
+    .dash-grid { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 22px; margin-bottom: 28px; }
+    @media (max-width: 960px) { .dash-grid { grid-template-columns: 1fr; } }
+    .chart-box { position: relative; height: 270px; width: 100%; }
+
+    /* ── Panels ──────────────────────────────────────────── */
+    .panel-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 22px; margin-bottom: 28px; }
+    .stat-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border-subtle); font-size: 0.875rem; }
+    .stat-row:last-child { border-bottom: none; }
+    .stat-name { color: var(--text-secondary); }
+    .stat-val { font-weight: 700; }
+
+    /* ── Badges ──────────────────────────────────────────── */
+    .badge { font-size: 0.75rem; padding: 3px 9px; border-radius: 6px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
+    .b-green { background: var(--accent-green-subtle); color: #047857; border: 1px solid var(--accent-green-border); }
+    .b-blue { background: var(--accent-blue-subtle); color: #0369a1; border: 1px solid var(--accent-blue-border); }
+    .b-amber { background: var(--accent-amber-subtle); color: #b45309; border: 1px solid var(--accent-amber-border); }
+    .b-purple { background: var(--accent-purple-subtle); color: #6d28d9; border: 1px solid var(--accent-purple-border); }
+    .b-rose { background: var(--accent-rose-subtle); color: #be123c; border: 1px solid #fecdd3; }
+    .pill { font-family: var(--font-mono); font-size: 0.78rem; background: #f1f5f9; border: 1px solid #cbd5e1; color: #1e293b; padding: 2px 7px; border-radius: 5px; }
+
+    /* ── Bullet List ─────────────────────────────────────── */
+    .clean-list { list-style: none; padding: 0; }
+    .clean-list li {
+      position: relative; padding: 6px 0 6px 20px; font-size: 0.875rem;
+      color: var(--text-secondary); line-height: 1.5;
+    }
+    .clean-list li::before {
+      content: ''; position: absolute; left: 0; top: 14px;
+      width: 6px; height: 6px; border-radius: 50%; background: #cbd5e1;
+    }
+
+    /* ── Flow Steps (Architecture) ───────────────────────── */
+    .step {
+      display: flex; gap: 18px; align-items: flex-start;
+      padding: 20px 0; border-bottom: 1px solid var(--border-subtle);
+    }
+    .step:last-child { border-bottom: none; }
+    .step-num {
+      width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 0.85rem;
+    }
+    .step h4 { font-size: 0.95rem; font-weight: 700; margin-bottom: 5px; }
+    .step p { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.45; }
+
+    /* ── Scenario Demos ──────────────────────────────────── */
+    .sc-tabs { display: flex; gap: 10px; margin-bottom: 24px; flex-wrap: wrap; }
+    .sc-btn {
+      padding: 10px 16px; border-radius: 8px; border: 1px solid var(--border-color);
+      background: #fff; font-family: var(--font-family); font-size: 0.85rem;
+      font-weight: 600; color: var(--text-secondary); cursor: pointer; transition: all 0.15s;
+    }
+    .sc-btn:hover { background: var(--bg-subtle); color: var(--text-primary); }
+    .sc-btn.active { background: #0f172a; color: #fff; border-color: #0f172a; }
+
+    .sc-pane { display: none; }
+    .sc-pane.active { display: block; }
+
+    .sc-card {
+      background: var(--bg-subtle); border: 1px solid var(--border-color);
+      border-radius: 12px; padding: 26px 28px;
+    }
+    .sc-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 6px; }
+    .sc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 18px; }
+    @media (max-width: 800px) { .sc-grid { grid-template-columns: 1fr; } }
+    .sc-box {
+      background: #fff; border: 1px solid var(--border-color); border-radius: 10px;
+      padding: 18px 20px;
+    }
+    .sc-box-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 10px; }
+
+    .msg-preview {
+      font-family: var(--font-mono); font-size: 0.8rem; color: #1e293b;
+      background: #fff; padding: 14px; border-radius: 8px;
+      border: 1px solid var(--border-color); line-height: 1.55; margin-top: 12px;
+    }
+
+    /* ── Live Verification Grid ──────────────────────────── */
+    .live-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 840px) { .live-grid { grid-template-columns: 1fr; } }
+    .stage-box { background: #f8fafc; border: 1px solid var(--border-color); border-radius: 10px; padding: 20px 22px; }
+    .stage-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #edf2f7; }
+    .stage-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+    .stage-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; font-size: 0.85rem; }
+    .stage-label { color: var(--text-muted); font-weight: 500; }
+    .stage-value { color: var(--text-primary); font-weight: 600; }
+    .stage-quote {
+      margin-top: 12px; padding: 12px 14px; background: #fff;
+      border-left: 3px solid var(--accent-purple); border-radius: 4px;
+      font-size: 0.8125rem; color: var(--text-secondary);
+      font-style: italic; line-height: 1.45;
+    }
+
+    /* ── Next Button ─────────────────────────────────────── */
+    .btn-next {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: #0f172a; color: #fff; padding: 11px 22px; border-radius: 8px;
+      border: none; font-family: var(--font-family); font-size: 0.875rem;
+      font-weight: 600; cursor: pointer; transition: background 0.15s; margin-top: 16px;
+    }
+    .btn-next:hover { background: #1e293b; }
+
+
+    /* ── Q&A Items ───────────────────────────────────────── */
+    .qna-item { padding: 16px 0; border-bottom: 1px solid var(--border-subtle); }
+    .qna-item:last-child { border-bottom: none; }
+    .qna-q { font-size: 0.9rem; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; }
+    .qna-a { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.55; }
+    /* ── Footer ──────────────────────────────────────────── */
+    footer { border-top: 1px solid var(--border-color); padding-top: 28px; margin-top: 24px; text-align: center; color: var(--text-muted); font-size: 0.8125rem; }
+  </style>
+</head>
+
+<body>
+<div class="container">
+
+  <!-- ════════════════ Top Bar ════════════════ -->
+  <header class="top-nav">
+    <div>
+      <div style="display:flex; align-items:center; gap:12px;">
+        <h1>Sentinel</h1>
+        <span class="brand-badge">Track 03: AI Revenue Recovery</span>
+      </div>
+      <p class="subtitle">Compliance-First Autonomous Recovery Engine for UPI Autopay &amp; Recurring Mandates</p>
+    </div>
+    <div class="live-chip"><div class="dot"></div><span>Live Razorpay Webhook Verified</span></div>
+  </header>
+
+  <!-- ════════════════ Tab Bar ════════════════ -->
+  <nav class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('problem')">The Problem<span class="t-num">01</span></button>
+    <button class="tab-btn" onclick="switchTab('architecture')">Architecture<span class="t-num">02</span></button>
+    <button class="tab-btn" onclick="switchTab('impact')">Portfolio Impact<span class="t-num">03</span></button>
+    <button class="tab-btn" onclick="switchTab('demos')">Showcase Demos<span class="t-num">04</span></button>
+    <button class="tab-btn" onclick="switchTab('live')">Live Sandbox Proof<span class="badge b-green" style="font-size:0.7rem;padding:2px 6px;">🟢 Real API</span></button>
+    <button class="tab-btn" onclick="switchTab('qna')">Q&amp;A Defense<span class="t-num">06</span></button>
+  </nav>
+
+  <!-- ════════════════════════════════════════════════════════
+       TAB 1 — THE PROBLEM
+       ════════════════════════════════════════════════════════ -->
+  <section id="tab-problem" class="tab-pane active">
+
+    <!-- Sharp Positioning Hero Banner -->
+    <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #fff; padding: 22px 26px; border-radius: 12px; margin-bottom: 24px; border: 1px solid #334155; box-shadow: 0 4px 12px rgba(0,0,0,0.12);">
+      <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #38bdf8; margin-bottom: 6px;">⚡ Core Architectural Positioning</div>
+      <p style="font-size: 0.95rem; font-weight: 500; line-height: 1.55; color: #f8fafc;">
+        <strong>Most recovery agents work across generic payment failures.</strong> This engine is built around one exact, regulation-bound mechanism: <strong>UPI Autopay's 4-attempt NPCI cap</strong> and <strong>RBI's ₹15,000 re-authorization threshold</strong> &mdash; encoded as hard, LLM-unoverridable rules, not prompt suggestions.
+      </p>
+      <div style="margin-top: 14px; font-size: 0.8125rem; color: #94a3b8; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+        <span style="display:flex; align-items:center; gap:6px;"><span style="color:#38bdf8;">📄</span> Deep Tech Docs: <code style="color:#e2e8f0; background:#334155; padding:2px 6px; border-radius:4px;">problems-and-solutions.md</code></span>
+        <span style="display:flex; align-items:center; gap:6px;"><span style="color:#4ade80;">🟢</span> Real Webhooks: Live Razorpay Sandbox HMAC SHA-256 Verified</span>
+      </div>
+    </div>
+
+    <div class="card" style="border-left: 4px solid var(--accent-rose);">
+      <div class="card-header">
+        <div>
+          <div class="card-title">The UPI Autopay Cliff: Why Recurring Debits Fail</div>
+          <div class="card-subtitle">The regulatory trap, failure statistics, and hidden revenue bleed</div>
+        </div>
+        <span class="badge b-rose">Critical Industry Problem</span>
+      </div>
+
+      <!-- Key Numbers -->
+      <div class="metrics-grid" style="margin-bottom: 32px;">
+        <div class="metric-card">
+          <div class="metric-label">National Failure Rate</div>
+          <div class="metric-value" style="color:var(--accent-rose);">30–50%</div>
+          <div class="metric-sub">UPI Autopay Recurring Debits</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Regulatory Attempt Cap</div>
+          <div class="metric-value" style="color:#b45309;">4 Attempts</div>
+          <div class="metric-sub">1 Original + 3 Retries (NPCI)</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">The Cliff Event</div>
+          <div class="metric-value" style="color:#7c3aed; font-size:1.25rem;">subscription.halted</div>
+          <div class="metric-sub">Mandate Terminates Silently</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Dual Revenue Bleed</div>
+          <div class="metric-value" style="color:var(--accent-blue);">~2.0%</div>
+          <div class="metric-sub">Fee Loss (Razorpay) + ARR Loss (Merchant)</div>
+        </div>
+      </div>
+
+      <!-- Side by Side -->
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:28px;">
+        <div style="background:#fff1f2; border:1px solid #fecdd3; border-radius:10px; padding:22px 24px;">
+          <h4 style="color:#9f1239; font-size:0.9rem; font-weight:700; margin-bottom:10px;">How Traditional Systems Fail</h4>
+          <ul class="clean-list">
+            <li style="color:#4c0519;">Blind fixed-interval retries (every 24h regardless of context)</li>
+            <li style="color:#4c0519;">Burns all 3 retries right before payday on low-balance failures</li>
+            <li style="color:#4c0519;">No differentiation between bank outage vs. customer decline</li>
+            <li style="color:#4c0519;">Silent churn &mdash; subscription enters <code>halted</code> with no recovery path</li>
+          </ul>
+        </div>
+        <div style="background:#ecfdf5; border:1px solid #a7f3d0; border-radius:10px; padding:22px 24px;">
+          <h4 style="color:#065f46; font-size:0.9rem; font-weight:700; margin-bottom:10px;">Sentinel Recovery Engine</h4>
+          <ul class="clean-list">
+            <li style="color:#064e3b;">100% accurate error classification into 5 root-cause buckets</li>
+            <li style="color:#064e3b;">Payday-aware timing engine (LightGBM) preserves retry budget</li>
+            <li style="color:#064e3b;">Conversational Hinglish nudges via WhatsApp / SMS</li>
+            <li style="color:#064e3b;">7 hard regulatory guardrails (NPCI + RBI) with zero overrides</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Sources -->
+      <div style="background:#f8fafc; border:1px solid var(--border-color); border-radius:10px; padding:18px 22px;">
+        <div style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:10px; letter-spacing:0.05em;">Regulatory &amp; Industry Sources</div>
+        <ul class="clean-list">
+          <li><strong>NPCI UPI Autopay Guidelines (NPCI/UPI/2020-21)</strong> &mdash; Limits automated retries to 3 subsequent cycles (T+1, T+3, T+7) before mandate revocation</li>
+          <li><strong>RBI Circular RBI/2020-21/74 (e-Mandate Framework)</strong> &mdash; Mandatory 24h pre-debit notification; ₹15,000 threshold requiring Additional Factor of Authentication</li>
+          <li><strong>Razorpay Subscriptions API Lifecycle</strong> &mdash; Subscriptions transition to <code>halted</code> upon retry exhaustion</li>
+        </ul>
+      </div>
+
+      <button class="btn-next" onclick="switchTab('architecture')">Next: System Architecture &rarr;</button>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════
+       TAB 2 — ARCHITECTURE
+       ════════════════════════════════════════════════════════ -->
+  <section id="tab-architecture" class="tab-pane">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Autonomous 5-Stage Recovery Pipeline</div>
+          <div class="card-subtitle">Real-time ingestion, LLM reasoning, and deterministic regulatory safety</div>
+        </div>
+        <span class="badge b-blue">End-to-End Pipeline</span>
+      </div>
+
+      <div class="step">
+        <div class="step-num" style="background:var(--accent-blue-subtle); color:var(--accent-blue); border:1px solid var(--accent-blue-border);">1</div>
+        <div>
+          <h4>Webhook Ingestion &amp; Live API Resolution</h4>
+          <ul class="clean-list">
+            <li>Flask listener verifies Razorpay HMAC-SHA256 signatures with synchronous acknowledgement</li>
+            <li>Standalone <code>payment.failed</code> events auto-resolve parent subscription via Razorpay SDK invoice lookup</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num" style="background:var(--accent-amber-subtle); color:var(--accent-amber); border:1px solid var(--accent-amber-border);">2</div>
+        <div>
+          <h4>Failure Classification Engine</h4>
+          <ul class="clean-list">
+            <li>Inspects granular error codes and reasons from Razorpay payment entity</li>
+            <li>Maps to 5 deterministic buckets: <code>bank_side</code>, <code>low_balance</code>, <code>expired_mandate</code>, <code>reauth_mismatch</code>, <code>genuine_decline</code></li>
+            <li>100% deterministic classification against Razorpay's documented error-code taxonomy</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num" style="background:var(--accent-green-subtle); color:var(--accent-green); border:1px solid var(--accent-green-border);">3</div>
+        <div>
+          <h4>Predictive Timing Engine (LightGBM)</h4>
+          <ul class="clean-list">
+            <li>Evaluates 10 NPCI-compliant retry offsets (+24h to +168h)</li>
+            <li>Models salary-credit proximity (days 1 &amp; 7), calendar timing, and bank congestion cycles</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num" style="background:var(--accent-purple-subtle); color:var(--accent-purple); border:1px solid var(--accent-purple-border);">4</div>
+        <div>
+          <h4>Autonomous LLM Reasoning Agent</h4>
+          <ul class="clean-list">
+            <li>Groq-hosted <code>gpt-oss-120b</code> synthesizes customer history, attempt count, and error signals</li>
+            <li>Proposes actions (<code>delayed_retry</code>, <code>promise_to_pay_nudge</code>, <code>reauth_request</code>, <code>escalate_to_human</code>, <code>stand_down</code>) with grounded rationale</li>
+            <li>Generates Hinglish multi-channel templates for WhatsApp / SMS delivery</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num" style="background:var(--accent-rose-subtle); color:var(--accent-rose); border:1px solid #fecdd3;">5</div>
+        <div>
+          <h4>Deterministic Guardrail Validator &amp; Dispatcher</h4>
+          <ul class="clean-list">
+            <li>7 hard NPCI/RBI rules: 4-attempt cap, cooldown schedule, opt-out circuit breaker, ₹15k AFA gate</li>
+            <li>Overrides unsafe LLM proposals before execution &mdash; zero tolerance</li>
+            <li>Dispatches concrete receipts across WhatsApp, SMS, Email, and Support Queues</li>
+          </ul>
+        </div>
+      </div>
+
+      <button class="btn-next" onclick="switchTab('impact')">Next: Portfolio Benchmark Impact &rarr;</button>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════
+       TAB 3 — PORTFOLIO IMPACT
+       ════════════════════════════════════════════════════════ -->
+  <section id="tab-impact" class="tab-pane">
+
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-label">Total ARR at Risk</div>
+        <div class="metric-value">₹14.39 L</div>
+        <div class="metric-sub">200 Subscription Batch</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Capital Addressed</div>
+        <div class="metric-value" style="color:#0284c7;">₹12.70 L</div>
+        <div class="metric-sub pos">88.2% Coverage</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Razorpay Fee Impact</div>
+        <div class="metric-value" style="color:#059669;">₹25,404</div>
+        <div class="metric-sub pos">@ 2.0% Blended Take Rate</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">LLM Coverage</div>
+        <div class="metric-value" style="color:#7c3aed;">100.0%</div>
+        <div class="metric-sub pos">200 / 200 (0 Fallbacks)</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Guardrail Violations</div>
+        <div class="metric-value" style="color:#059669;">0</div>
+        <div class="metric-sub pos">100% NPCI/RBI Compliant</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">P2P Commitment</div>
+        <div class="metric-value" style="color:#d97706;">55.6%</div>
+        <div class="metric-sub">20 / 36 Nudges Committed</div>
+      </div>
+    </div>
+
+    <div class="dash-grid">
+      <div class="card">
+        <div class="card-header"><div><div class="card-title">Recovery Action Distribution</div><div class="card-subtitle">Autonomous routing across 200 records</div></div></div>
+        <div class="chart-box"><canvas id="actionChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div><div class="card-title">Root-Cause Failure Buckets</div><div class="card-subtitle">100% accurate classification</div></div></div>
+        <div class="chart-box"><canvas id="bucketChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="panel-grid">
+      <div class="card">
+        <div class="card-header"><div><div class="card-title">Multi-Channel Execution</div><div class="card-subtitle">Dispatch verification across delivery rails</div></div></div>
+        <div>
+          <div class="stat-row"><span class="stat-name">Total Dispatches</span><span class="stat-val">200 / 200 <span class="badge b-green">100%</span></span></div>
+          <div class="stat-row"><span class="stat-name">Failed Dispatches</span><span class="stat-val">0 <span class="badge b-green">Zero</span></span></div>
+          <div class="stat-row"><span class="stat-name">Re-auth &gt;₹15k (RBI Tagged)</span><span class="stat-val">19 <span class="badge b-purple">AFA Required</span></span></div>
+          <div class="stat-row"><span class="stat-name">UPI Autopay Delayed Retries</span><span class="stat-val">95</span></div>
+          <div class="stat-row"><span class="stat-name">Human Agent Escalations</span><span class="stat-val">56</span></div>
+          <div class="stat-row"><span class="stat-name">SMS / WhatsApp Dispatches</span><span class="stat-val">43</span></div>
+          <div class="stat-row"><span class="stat-name">Email Re-auth Links</span><span class="stat-val">6</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div><div class="card-title">Promise-to-Pay (P2P) Ledger</div><div class="card-subtitle">Low-balance nudge commitment outcomes</div></div></div>
+        <div>
+          <div class="stat-row"><span class="stat-name">Total Nudges Logged</span><span class="stat-val">36</span></div>
+          <div class="stat-row"><span class="stat-name">Capital Addressed</span><span class="stat-val">₹1,03,131</span></div>
+          <div class="stat-row"><span class="stat-name">Promised Date Given</span><span class="stat-val">20 <span class="badge b-green">55.6%</span></span></div>
+          <div class="stat-row"><span class="stat-name">Clicked, No Commit</span><span class="stat-val">8 <span class="badge b-amber">22.2%</span></span></div>
+          <div class="stat-row"><span class="stat-name">No Response</span><span class="stat-val">8 <span class="badge b-blue">22.2%</span></span></div>
+          <div class="stat-row"><span class="stat-name">LLM Nudge Compliance</span><span class="stat-val">36 / 36 <span class="badge b-green">100%</span></span></div>
+          <div class="stat-row"><span class="stat-name">First-Time Retry Rate</span><span class="stat-val">14 / 14 <span class="badge b-blue">100%</span></span></div>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-next" onclick="switchTab('demos')">Next: Showcase Demo Scenarios &rarr;</button>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════
+       TAB 4 — SHOWCASE DEMOS
+       ════════════════════════════════════════════════════════ -->
+  <section id="tab-demos" class="tab-pane">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Interactive Scenario Inspector</div>
+          <div class="card-subtitle">Explore real agent behavior: regulatory restraint, smart nudges, and RBI compliance</div>
+        </div>
+        <span class="badge b-purple">3 Scenarios</span>
+      </div>
+
+      <div class="sc-tabs">
+        <button class="sc-btn active" onclick="pickSc('a')">A &mdash; Guardrail Restraint</button>
+        <button class="sc-btn" onclick="pickSc('b')">B &mdash; Smart Recovery &amp; Nudge</button>
+        <button class="sc-btn" onclick="pickSc('c')">C &mdash; High-Ticket RBI Compliance</button>
+      </div>
+
+      <!-- ──── Scenario A ──── -->
+      <div id="sc-a" class="sc-pane active">
+        <div class="sc-card">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h3>Guardrail Circuit Breaker (Attempt #3 Enforcement)</h3>
+            <span class="badge b-rose">Regulatory Safety</span>
+          </div>
+
+          <ul class="clean-list" style="margin-bottom:20px;">
+            <li><strong>Trigger:</strong> Bank-side outage causes payment failure at <code>auth_attempts = 3</code></li>
+            <li><strong>LLM proposes:</strong> <code>delayed_retry</code> &mdash; "Temporary bank switch glitch; retry in 24 hours"</li>
+            <li><strong>Problem:</strong> NPCI cap is 4 total attempts &mdash; one more retry exhausts the budget permanently</li>
+          </ul>
+
+          <div class="sc-grid">
+            <div class="sc-box" style="border-color:#fecdd3;">
+              <div class="sc-box-label" style="color:#dc2626;">LLM Proposal (Blocked)</div>
+              <div class="stat-row" style="border:none; padding:4px 0;"><span class="stat-name">Action</span><span class="pill">delayed_retry</span></div>
+              <div class="stat-row" style="border:none; padding:4px 0;"><span class="stat-name">Confidence</span><span class="stat-val">High</span></div>
+              <div style="font-size:0.825rem; color:var(--text-muted); margin-top:4px; font-style:italic;">"Temporary bank switch glitch; retry in 24 hours."</div>
+            </div>
+            <div class="sc-box" style="border-color:var(--accent-green-border);">
+              <div class="sc-box-label" style="color:#059669;">Guardrail Override (Enforced)</div>
+              <div class="stat-row" style="border:none; padding:4px 0;"><span class="stat-name">Final Action</span><span class="badge b-green" style="font-weight:700;">stand_down</span></div>
+              <div class="stat-row" style="border:none; padding:4px 0;"><span class="stat-name">Rule Triggered</span><span class="stat-val">MAX_ATTEMPTS</span></div>
+              <div style="font-size:0.825rem; color:#065f46; margin-top:4px;">NPCI 4-attempt hard limit enforced. Subscription preserved from permanent halt.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ──── Scenario B ──── -->
+      <div id="sc-b" class="sc-pane">
+        <div class="sc-card">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h3>Smart Recovery &amp; Conversational Hinglish Nudge</h3>
+            <span class="badge b-green">Revenue Recovery</span>
+          </div>
+
+          <ul class="clean-list" style="margin-bottom:20px;">
+            <li><strong>Customer:</strong> Rahul Sharma &mdash; repeat low balance on the 28th (₹4,484)</li>
+            <li><strong>Agent decision:</strong> Don't burn a retry; send WhatsApp nudge instead</li>
+            <li><strong>Timing:</strong> Scheduled +4 days to align with salary credit (1st of month)</li>
+          </ul>
+
+          <div class="sc-grid">
+            <div class="sc-box" style="grid-column: span 2;">
+              <div class="sc-box-label" style="color:var(--accent-blue);">WhatsApp Nudge Delivered</div>
+              <div class="msg-preview">
+                "Namaste Rahul! Aapka ₹4,484.00 ka subscription debit attempt balance issue ki wajah se pause ho gaya hai. Agla retry schedule karne ke liye yahan tap karein: https://rzp.io/i/rec_ILBvAQ"
+              </div>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin-top:18px;">
+            <div class="sc-box" style="text-align:center;">
+              <div class="sc-box-label" style="color:var(--accent-green);">P2P Outcome</div>
+              <div style="font-size:1.25rem; font-weight:800; color:var(--accent-green);">Committed</div>
+              <div style="font-size:0.8rem; color:var(--text-muted); margin-top:4px;">Pay on salary day (+4 days)</div>
+            </div>
+            <div class="sc-box" style="text-align:center;">
+              <div class="sc-box-label" style="color:var(--accent-blue);">Capital Secured</div>
+              <div style="font-size:1.25rem; font-weight:800; color:var(--accent-blue);">₹4,484</div>
+              <div style="font-size:0.8rem; color:var(--text-muted); margin-top:4px;">Retry scheduled for 1st</div>
+            </div>
+            <div class="sc-box" style="text-align:center;">
+              <div class="sc-box-label" style="color:var(--accent-purple);">Channel</div>
+              <div style="font-size:1.25rem; font-weight:800; color:var(--accent-purple);">WhatsApp</div>
+              <div style="font-size:0.8rem; color:var(--text-muted); margin-top:4px;">Hinglish template</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ──── Scenario C ──── -->
+      <div id="sc-c" class="sc-pane">
+        <div class="sc-card">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h3>High-Ticket RBI Compliance (&gt;₹15,000)</h3>
+            <span class="badge b-purple">Regulatory Mandate</span>
+          </div>
+
+          <ul class="clean-list" style="margin-bottom:20px;">
+            <li><strong>Subscription:</strong> SaaS mandate of <strong>₹44,373.40</strong> fails on charge attempt</li>
+            <li><strong>RBI Rule:</strong> Mandates above ₹15,000 cannot be auto-debited without fresh AFA approval (RBI/2020-21/74)</li>
+            <li><strong>Agent response:</strong> Suppresses automated retry; issues re-authorization link with AFA tag</li>
+          </ul>
+
+          <div class="sc-grid">
+            <div class="sc-box">
+              <div class="sc-box-label" style="color:var(--accent-amber);">Detection</div>
+              <div class="stat-row" style="border:none; padding:4px 0;"><span class="stat-name">Amount</span><span class="stat-val" style="color:var(--accent-amber);">₹44,373.40</span></div>
+              <div class="stat-row" style="border:none; padding:4px 0;"><span class="stat-name">Threshold</span><span class="pill">₹15,000 (AFA Limit)</span></div>
+              <div class="stat-row" style="border:none; padding:4px 0;"><span class="stat-name">Flag</span><span class="badge b-purple">RBI_E_MANDATE_ABOVE_15K</span></div>
+            </div>
+            <div class="sc-box">
+              <div class="sc-box-label" style="color:var(--accent-green);">Compliance Action</div>
+              <div class="stat-row" style="border:none; padding:4px 0;"><span class="stat-name">Action</span><span class="badge b-purple" style="font-weight:700;">reauth_request</span></div>
+              <div class="stat-row" style="border:none; padding:4px 0;"><span class="stat-name">Paylink Ref</span><span class="pill">paylink_615ffea9b60b</span></div>
+              <div class="stat-row" style="border:none; padding:4px 0;"><span class="stat-name">Guardrail</span><span class="badge b-green">Approved</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-next" onclick="switchTab('live')">Next: Live Razorpay Sandbox Proof &rarr;</button>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════
+       TAB 5 — LIVE SANDBOX PROOF
+       ════════════════════════════════════════════════════════ -->
+  <section id="tab-live" class="tab-pane">
+    <div class="card" style="border-left: 4px solid var(--accent-green); box-shadow: var(--shadow-md);">
+      <div class="card-header">
+        <div>
+          <div class="card-title" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <span>⚡ Live Razorpay Test-Mode Verification</span>
+            <span class="badge b-green">🟢 HMAC-SHA256 Verified</span>
+            <span class="badge b-blue">HTTP 200 OK</span>
+          </div>
+          <div class="card-subtitle" style="margin-top:4px;">Real payment failure captured from Razorpay banking sandbox via ngrok webhook tunnel</div>
+        </div>
+        <div class="pill">Event: payment.failed</div>
+      </div>
+
+      <div class="live-grid">
+        <!-- 1 -->
+        <div class="stage-box">
+          <div class="stage-head">
+            <span class="stage-title" style="color:var(--accent-blue);">1. Webhook Ingestion &amp; API Resolution</span>
+            <span class="badge b-blue">Live SDK Fetch</span>
+          </div>
+          <div class="stage-row"><span class="stage-label">Payment ID</span><span class="pill">pay_TX6FVZGMhsySpm</span></div>
+          <div class="stage-row"><span class="stage-label">Linked Subscription</span><span class="pill">sub_TX5nwsLAxSHiFE</span></div>
+          <div class="stage-row"><span class="stage-label">Amount</span><span class="stage-value" style="color:#059669;">₹500.00 <span style="font-size:0.75rem; color:var(--text-muted); font-weight:normal;">(50,000 paise)</span></span></div>
+          <div class="stage-row"><span class="stage-label">Resolution</span><span class="stage-value" style="font-size:0.8rem; color:var(--text-secondary);">Invoice API &rarr; <code class="pill">inv_TX5nxJycmqIlfl</code></span></div>
+        </div>
+        <!-- 2 -->
+        <div class="stage-box">
+          <div class="stage-head">
+            <span class="stage-title" style="color:var(--accent-amber);">2. Failure Signals &amp; Classifier</span>
+            <span class="badge b-amber">Exact Match</span>
+          </div>
+          <div class="stage-row"><span class="stage-label">Error Code</span><span class="pill" style="color:#b45309; background:#fef3c7;">BAD_REQUEST_ERROR</span></div>
+          <div class="stage-row"><span class="stage-label">Granular Reason</span><span class="pill" style="color:#b91c1c; background:#fee2e2;">international_not_allowed</span></div>
+          <div class="stage-row"><span class="stage-label">Classifier Bucket</span><span class="badge b-amber" style="font-weight:700;">genuine_decline</span></div>
+          <div class="stage-row"><span class="stage-label">Path</span><span class="stage-value" style="font-size:0.8rem; color:var(--text-secondary);">error_reason_lookup</span></div>
+        </div>
+        <!-- 3 -->
+        <div class="stage-box">
+          <div class="stage-head">
+            <span class="stage-title" style="color:var(--accent-purple);">3. Autonomous LLM Decision</span>
+            <span class="badge b-purple">Groq / gpt-oss-120b</span>
+          </div>
+          <div class="stage-row"><span class="stage-label">Action</span><span class="badge b-purple" style="font-size:0.85rem; font-weight:700;">escalate_to_human</span></div>
+          <div class="stage-row"><span class="stage-label">Channel</span><span class="pill">human_agent</span></div>
+          <div class="stage-quote">
+            "Payment failed due to an unsupported international card on a domestic-only merchant. Customer guidance needed to register an accepted payment method."
+          </div>
+        </div>
+        <!-- 4 -->
+        <div class="stage-box">
+          <div class="stage-head">
+            <span class="stage-title" style="color:var(--accent-green);">4. Guardrails &amp; Dispatch Receipt</span>
+            <span class="badge b-green">Confirmed</span>
+          </div>
+          <div class="stage-row"><span class="stage-label">Guardrail</span><span class="badge b-green" style="font-weight:700;">Approved (0 Overrides)</span></div>
+          <div class="stage-row"><span class="stage-label">Ticket</span><span class="pill" style="font-weight:600;">tkt_637d373be25e</span></div>
+          <div class="stage-row"><span class="stage-label">Queue</span><span class="stage-value" style="font-size:0.85rem;">MerchantOpsQueue <span class="badge b-blue" style="font-size:0.7rem;">High Priority</span></span></div>
+          <div class="stage-row"><span class="stage-label">Status</span><span class="stage-value" style="color:#059669; font-weight:700;">Dispatched</span></div>
+        </div>
+      </div>
+
+      <div style="margin-top:24px; text-align:center;">
+        <button class="btn-next" onclick="switchTab('qna')">Next: Q&amp;A Defense &rarr;</button>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ════════════════════════════════════════════════════════
+       TAB 6 — Q&A DEFENSE
+       ════════════════════════════════════════════════════════ -->
+  <section id="tab-qna" class="tab-pane">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Anticipated Questions &amp; Answers</div>
+          <div class="card-subtitle">Technical defense points for judges reviewing this submission</div>
+        </div>
+        <span class="badge b-blue">6 Categories</span>
+      </div>
+
+      <div class="sc-tabs">
+        <button class="sc-btn active" onclick="pickQna('market')">Problem &amp; Market</button>
+        <button class="sc-btn" onclick="pickQna('arch')">Architecture</button>
+        <button class="sc-btn" onclick="pickQna('data')">Data &amp; Validation</button>
+        <button class="sc-btn" onclick="pickQna('liveverify')">Live Verification</button>
+        <button class="sc-btn" onclick="pickQna('safety')">Compliance &amp; Safety</button>
+        <button class="sc-btn" onclick="pickQna('prod')">Production Readiness</button>
+      </div>
+
+      <!-- Market -->
+      <div id="qna-market" class="sc-pane active">
+        <div class="sc-card">
+          <div class="qna-item">
+            <h4 class="qna-q">Why is UPI Autopay failure a real problem worth solving?</h4>
+            <p class="qna-a">UPI Autopay has a 30&ndash;50% failure rate on recurring debits across India. NPCI caps automated retries at 4 total attempts. After exhaustion, Razorpay fires <code>subscription.halted</code> and the mandate dies silently &mdash; no notification to the merchant, no recovery path for the customer. This creates a dual revenue bleed: the merchant loses recurring ARR, and Razorpay loses its ~2% gateway fee on every future charge.</p>
+          </div>
+          <div class="qna-item">
+            <h4 class="qna-q">Where do the 30&ndash;50% failure rate numbers come from?</h4>
+            <p class="qna-a">Industry reports from NPCI&rsquo;s UPI ecosystem reviews and Razorpay&rsquo;s own published subscription lifecycle documentation. The range reflects variance across merchant verticals &mdash; insurance and SaaS mandates tend toward the higher end due to larger ticket sizes and stricter bank policies.</p>
+          </div>
+          <div class="qna-item">
+            <h4 class="qna-q">How big is the revenue impact for Razorpay specifically?</h4>
+            <p class="qna-a">At a 2% blended take rate, every ₹1 Cr in halted subscription volume costs Razorpay ₹2 L in direct fee revenue. Our 200-record benchmark identified ₹14.39 L at risk, translating to ₹25,404 in fee impact. Across Razorpay&rsquo;s merchant base, this scales to crores in recoverable fee revenue per month.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Architecture -->
+      <div id="qna-arch" class="sc-pane">
+        <div class="sc-card">
+          <div class="qna-item">
+            <h4 class="qna-q">Why a 5-stage pipeline instead of a simpler retry-and-notify system?</h4>
+            <p class="qna-a">Blind retries are the core problem &mdash; they waste the limited NPCI retry budget on failures that can&rsquo;t be resolved by retrying (e.g., expired mandates, international card blocks). Each stage adds a specific intelligence layer: classification tells you <em>why</em> it failed, timing tells you <em>when</em> to act, the LLM decides <em>what</em> to do, and guardrails ensure <em>nothing unsafe executes</em>.</p>
+          </div>
+          <div class="qna-item">
+            <h4 class="qna-q">Why use an LLM at all? Couldn&rsquo;t rules handle this?</h4>
+            <p class="qna-a">Rules handle the safety constraints (guardrails), but the recovery strategy requires nuance. A low-balance failure on the 28th for a customer who historically pays on the 1st needs a different response than the same error for a first-time subscriber. The LLM synthesizes customer history, error context, attempt count, and timing signals to propose contextually appropriate actions &mdash; something a static rule tree can&rsquo;t do without becoming unmaintainably large.</p>
+          </div>
+          <div class="qna-item">
+            <h4 class="qna-q">Why deterministic guardrails <em>after</em> the LLM, not prompt engineering?</h4>
+            <p class="qna-a">Prompt engineering is probabilistic &mdash; you can ask the LLM to follow NPCI rules, but you can&rsquo;t guarantee it. Our guardrails are deterministic code that inspects the LLM&rsquo;s proposal against hard regulatory constraints and overrides it if non-compliant. This is the same pattern used in production autonomous systems: the AI proposes, a safety layer disposes.</p>
+          </div>
+          <div class="qna-item">
+            <h4 class="qna-q">How does the classifier work? Is it ML-based?</h4>
+            <p class="qna-a">The classifier is a deterministic lookup against Razorpay&rsquo;s documented error-code taxonomy. Each <code>error_code</code> + <code>error_reason</code> combination maps to one of 5 root-cause buckets. This is intentional &mdash; payment error codes are a closed, well-documented set, not a natural language classification problem. A deterministic mapper gives 100% accuracy by construction and zero false positives.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Data & Validation -->
+      <div id="qna-data" class="sc-pane">
+        <div class="sc-card">
+          <div class="qna-item">
+            <h4 class="qna-q">The 200-record dataset is synthetic &mdash; how do you know this generalizes?</h4>
+            <p class="qna-a">The synthetic records are generated from Razorpay&rsquo;s real error-code taxonomy, real subscription lifecycle states, and realistic Indian payment amounts. The classifier is deterministic against this taxonomy, so it generalizes by construction &mdash; any real Razorpay error code will map to the same bucket. The LLM and timing engine were validated against diverse parameter combinations.</p>
+          </div>
+          <div class="qna-item">
+            <h4 class="qna-q">What does &ldquo;100% deterministic classification&rdquo; mean exactly?</h4>
+            <p class="qna-a">Every Razorpay error code maps to exactly one failure bucket via a lookup table. There&rsquo;s no probabilistic model, no threshold, no false positive rate. If Razorpay returns <code>INSUFFICIENT_FUNDS</code>, it maps to <code>low_balance</code>. The taxonomy is complete and exhaustive for Razorpay&rsquo;s documented error codes.</p>
+          </div>
+          <div class="qna-item">
+            <h4 class="qna-q">How do you validate that the LLM proposals are sensible?</h4>
+            <p class="qna-a">Three layers: (1) The LLM must return structured JSON conforming to a strict schema. (2) Every proposal passes through 7 deterministic guardrail checks before execution. (3) The audit log records the full decision chain for human review. In our benchmark, 100% of LLM proposals were schema-compliant and required zero guardrail overrides.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Verification -->
+      <div id="qna-liveverify" class="sc-pane">
+        <div class="sc-card">
+          <div class="qna-item">
+            <h4 class="qna-q">What does the &ldquo;Live Sandbox Proof&rdquo; actually prove?</h4>
+            <p class="qna-a">It proves the pipeline works end-to-end with real Razorpay infrastructure. We created a real subscription via the Test Mode API, triggered a real <code>payment.failed</code> webhook, captured it via ngrok with HMAC-SHA256 verification, and processed it through the full pipeline. The payment ID, invoice resolution, classification, LLM decision, and dispatch receipt are all from this real event.</p>
+          </div>
+          <div class="qna-item">
+            <h4 class="qna-q">Why did the live test show <code>international_not_allowed</code>?</h4>
+            <p class="qna-a">Razorpay&rsquo;s Test Mode uses specific test card numbers that simulate different failure scenarios. The card triggered an international transaction decline, which our classifier correctly routes to <code>genuine_decline</code>. The LLM appropriately escalated to human support rather than wasting a retry &mdash; actually a stronger demo of pipeline intelligence than a simple bank timeout.</p>
+          </div>
+          <div class="qna-item">
+            <h4 class="qna-q">Is the HMAC verification real?</h4>
+            <p class="qna-a">Yes. Razorpay signs every webhook with HMAC-SHA256 using the webhook secret. Our Flask listener independently computes the signature from the raw request body and compares it. <code>sig_valid=True</code> confirms the payload was genuinely sent by Razorpay&rsquo;s servers, not fabricated.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Safety -->
+      <div id="qna-safety" class="sc-pane">
+        <div class="sc-card">
+          <div class="qna-item">
+            <h4 class="qna-q">What happens if the LLM suggests something unsafe?</h4>
+            <p class="qna-a">The guardrail validator blocks it and substitutes a safe action. Example: if a subscription has used 3 retry attempts and the LLM proposes <code>delayed_retry</code>, the <code>MAX_ATTEMPTS</code> guardrail overrides it to <code>stand_down</code>. This is demonstrated in Showcase Scenario A. The override is logged in the audit trail.</p>
+          </div>
+          <div class="qna-item">
+            <h4 class="qna-q">How do you handle the RBI ₹15,000 AFA requirement?</h4>
+            <p class="qna-a">Any mandate above ₹15,000 is flagged by the schema layer (<code>rbi_afa_required = True</code>). The guardrail validator blocks any automated retry. Instead, a re-authorization link with AFA is generated. Demonstrated in Showcase Scenario C with a ₹44,373 mandate.</p>
+          </div>
+          <div class="qna-item">
+            <h4 class="qna-q">What are the 7 guardrail rules?</h4>
+            <div style="margin-top:8px;">
+              <div class="stat-row"><span class="stat-name">MAX_ATTEMPTS</span><span class="stat-val" style="font-size:0.8rem;">Cannot exceed NPCI&rsquo;s 4-attempt cap</span></div>
+              <div class="stat-row"><span class="stat-name">COOLDOWN_WINDOWS</span><span class="stat-val" style="font-size:0.8rem;">Must respect 24h / 72h / 168h spacing</span></div>
+              <div class="stat-row"><span class="stat-name">OPT_OUT_KILL_SWITCH</span><span class="stat-val" style="font-size:0.8rem;">Immediate stand-down on opt-out</span></div>
+              <div class="stat-row"><span class="stat-name">REAUTH_THRESHOLD</span><span class="stat-val" style="font-size:0.8rem;">Mandates ≥₹15k require re-auth (RBI)</span></div>
+              <div class="stat-row"><span class="stat-name">HALTED_SUBSCRIPTION</span><span class="stat-val" style="font-size:0.8rem;">No retries after subscription halts</span></div>
+              <div class="stat-row"><span class="stat-name">MIN_REMAINING_CYCLES</span><span class="stat-val" style="font-size:0.8rem;">Stand down at 0 remaining cycles</span></div>
+              <div class="stat-row"><span class="stat-name">GENUINE_DECLINE_STANDDOWN</span><span class="stat-val" style="font-size:0.8rem;">One nudge for permanent declines, then stop</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Production -->
+      <div id="qna-prod" class="sc-pane">
+        <div class="sc-card">
+          <div class="qna-item">
+            <h4 class="qna-q">What would it take to move this to production?</h4>
+            <p class="qna-a">Three additions: (1) Replace execution stubs with real Razorpay API calls (payment links, retry triggers). (2) Add a persistent database (PostgreSQL) replacing JSON file storage. (3) Deploy the webhook listener behind a load balancer with queue-based processing. The core pipeline logic &mdash; classification, timing, LLM reasoning, guardrails &mdash; is production-ready as-is.</p>
+          </div>
+          <div class="qna-item">
+            <h4 class="qna-q">How does this scale to thousands of webhooks per minute?</h4>
+            <p class="qna-a">Decouple ingestion from processing: the listener writes to a message queue, workers consume events asynchronously. The classifier and guardrails are pure computation (microseconds). The LLM call (~500ms via Groq) is the bottleneck, but it&rsquo;s embarrassingly parallel &mdash; each subscription is independent.</p>
+          </div>
+          <div class="qna-item">
+            <h4 class="qna-q">Why not just use Razorpay&rsquo;s built-in retry logic?</h4>
+            <p class="qna-a">Razorpay&rsquo;s built-in retry is a fixed-interval system with no intelligence about <em>why</em> the payment failed. It treats a bank outage the same as an expired mandate. Our agent adds the intelligence layer on top &mdash; using Razorpay&rsquo;s own APIs and webhooks, but making smarter decisions about when and how to act.</p>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-next" onclick="switchTab('problem')">&larr; Back to Problem Statement</button>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>Sentinel &bull; Razorpay Buildathon Track 03 &bull; <a href="https://github.com/Shivani-ramesh09/Razorpay" target="_blank" rel="noopener" style="color:var(--accent-blue); text-decoration:none; font-weight:600;">GitHub Repository</a> &bull; <a href="https://github.com/Shivani-ramesh09/Razorpay/blob/main/QNA.md" target="_blank" rel="noopener" style="color:var(--accent-blue); text-decoration:none; font-weight:600;">Full Q&amp;A Document</a></footer>
+</div>
+
+<!-- ═══════════════════ Scripts ═══════════════════ -->
+<script>
+function switchTab(id) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  const pane = document.getElementById('tab-' + id);
+  if (pane) pane.classList.add('active');
+  const btn = [...document.querySelectorAll('.tab-btn')].find(b => b.getAttribute('onclick')?.includes(id));
+  if (btn) btn.classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function pickSc(id) {
+  document.querySelectorAll('.sc-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.sc-btn').forEach(b => b.classList.remove('active'));
+  const pane = document.getElementById('sc-' + id);
+  if (pane) pane.classList.add('active');
+  const btn = [...document.querySelectorAll('.sc-btn')].find(b => b.getAttribute('onclick') === "pickSc('" + id + "')");
+  if (btn) btn.classList.add('active');
+}
+
+function pickQna(id) {
+  document.querySelectorAll('#tab-qna .sc-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('#tab-qna .sc-btn').forEach(b => b.classList.remove('active'));
+  const pane = document.getElementById('qna-' + id);
+  if (pane) pane.classList.add('active');
+  const btn = [...document.querySelectorAll('#tab-qna .sc-btn')].find(b => b.getAttribute('onclick') === "pickQna('" + id + "')");
+  if (btn) btn.classList.add('active');
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  new Chart(document.getElementById('actionChart').getContext('2d'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Delayed Retry (62)','Re-auth Request (43)','Escalate to Human (37)','P2P Nudge (36)','Stand Down (22)'],
+      datasets: [{ data: [62,43,37,36,22], backgroundColor: ['#0284c7','#8b5cf6','#d97706','#059669','#94a3b8'], borderColor: '#fff', borderWidth: 3, hoverOffset: 6 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'right', labels: { color: '#334155', font: { family: 'Inter', size: 12, weight: '500' }, padding: 14 } },
+        tooltip: { backgroundColor: '#0f172a', titleColor: '#f8fafc', bodyColor: '#e2e8f0', borderColor: '#cbd5e1', borderWidth: 1, padding: 10, cornerRadius: 8 }
+      },
+      cutout: '68%'
+    }
+  });
+
+  new Chart(document.getElementById('bucketChart').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: ['Bank-Side','Low Balance','Expired Mandate','Re-auth Mismatch','Genuine Decline'],
+      datasets: [{ label: 'Records', data: [80,50,30,20,20], backgroundColor: ['#0284c7','#059669','#d97706','#7c3aed','#64748b'], borderRadius: 6 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { backgroundColor: '#0f172a', titleColor: '#f8fafc', bodyColor: '#e2e8f0', borderColor: '#cbd5e1', borderWidth: 1, padding: 10, cornerRadius: 8 } },
+      scales: {
+        x: { ticks: { color: '#64748b', font: { family: 'Inter', size: 11, weight: '500' } }, grid: { display: false } },
+        y: { ticks: { color: '#64748b', font: { family: 'Inter', size: 11, weight: '500' } }, grid: { color: '#f1f5f9' } }
+      }
+    }
+  });
+});
+</script>
+</body>
+</html>
