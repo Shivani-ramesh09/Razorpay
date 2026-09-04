@@ -1,6 +1,6 @@
-# Anticipated Questions & Answers
+# Documentation
 
-**Mandate Recovery Agent — Razorpay Buildathon Track 03**
+**Sentinel - Razorpay Buildathon Track 03**
 
 ---
 
